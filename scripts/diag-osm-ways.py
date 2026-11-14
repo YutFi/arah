@@ -16,8 +16,10 @@ def bearing(a, b):
     x = math.cos(la1) * math.sin(la2) - math.sin(la1) * math.cos(la2) * math.cos(lo2 - lo1)
     return (math.degrees(math.atan2(y, x)) + 360) % 360
 found = {k: [] for k in pts}
-fp = osmium.FileProcessor(src, osmium.osm.WAY).with_locations().with_filter(osmium.filter.KeyFilter("highway"))
+fp = osmium.FileProcessor(src, osmium.osm.NODE | osmium.osm.WAY).with_locations().with_filter(osmium.filter.KeyFilter("highway"))
 for w in fp:
+    if not hasattr(w, "nodes"):
+        continue
     hw = w.tags.get("highway")
     if hw in ("footway", "path", "cycleway", "steps", "pedestrian", "track", "service", "bridleway", "corridor"):
         continue
