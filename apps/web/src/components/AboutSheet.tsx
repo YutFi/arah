@@ -48,7 +48,7 @@ export function AboutSheet({ awas, onClose }: Props) {
 
         <h3>What works now</h3>
         <p>Search by place name, street address or coordinates, a pin you can drop with a long press, nearby petrol, food, entertainment, hotspots and attractions, routes with alternatives, turn-by-turn directions with voice, current speed, rerouting, and a simulated drive for testing.</p>
-        <p>Route cards count traffic lights, mapped speed cameras and toll plazas from OpenStreetMap. Volunteers map these, so the real numbers can be higher.</p>
+        <p>Route cards count traffic lights, mapped speed cameras and toll plazas from OpenStreetMap, and the chosen route shows them on the map. Volunteers map these, so the real numbers can be higher.</p>
 
         <h3>Map data</h3>
         <p>{snapText}</p>
@@ -56,7 +56,7 @@ export function AboutSheet({ awas, onClose }: Props) {
         <h3>What does not exist yet</h3>
         <ul>
           <li><b>Live traffic:</b> not available. Travel times assume typical road speeds.</li>
-          <li><b>Toll prices:</b> not available. Routes only say that a section is a toll road and how many plazas are on it.</li>
+          <li><b>Toll prices:</b> a partial estimate. Only a small hand-checked list of flat-rate plazas (ordinary car) is priced, each from two public rate lists that agree, with the check date shown. Highways that charge by distance (such as PLUS) are not priced, and any plaza not on the list says "price not available".</li>
           <li><b>Speed cameras (AWAS):</b> {awasText} The camera count on a route card comes from OpenStreetMap, not from the official AWAS list, and there are no spoken camera alerts from it.</li>
           <li><b>Speed limits:</b> not shown yet.</li>
         </ul>

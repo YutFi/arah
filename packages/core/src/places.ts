@@ -9,7 +9,7 @@ import { haversine, isInMalaysiaBBox, type LatLng } from "./geo";
  * by popularity. Results are simply the nearest named places of each kind.
  */
 
-export type CategoryId = "fuel" | "food" | "fun" | "hot" | "see";
+export type CategoryId = "fuel" | "worship" | "food" | "fun" | "hot" | "see";
 
 /** [osm key, osm value, short label shown to the person] */
 type TagRule = readonly [key: string, value: string, label: string];
@@ -29,6 +29,14 @@ export const CATEGORIES: readonly PlaceCategory[] = [
     id: "fuel",
     label: "Petrol",
     rules: [["amenity", "fuel", "Petrol station"]],
+  },
+  {
+    // "Rumah ibadah": mosques, suraus, churches and temples. OpenStreetMap tags
+    // them all as amenity=place_of_worship; the `religion` tag tells them apart
+    // (see worshipKind below).
+    id: "worship",
+    label: "Worship",
+    rules: [["amenity", "place_of_worship", "Place of worship"]],
   },
   {
     id: "fun",
@@ -102,7 +110,8 @@ export interface Poi {
   phone?: string;
 }
 
-export const DEFAULT_RADIUS_M = 2000;
+/** How far "nearby" reaches. */
+export const DEFAULT_RADIUS_M = 5000;
 const MIN_RADIUS_M = 300;
 const MAX_RADIUS_M = 5000;
 
@@ -145,11 +154,36 @@ interface OverpassElement {
   tags?: Record<string, string>;
 }
 
+/** Short kind for a place of worship, from the mapper's `religion` tag (and the name for Muslim places). */
+export function worshipKind(tags: Record<string, string>): string {
+  const name = (tags["name:en"] ?? tags.name ?? "").toLowerCase();
+  switch ((tags.religion ?? "").toLowerCase()) {
+    case "muslim":
+      if (/\bsurau\b/.test(name)) return "Surau";
+      if (/\bmasjid\b|\bmosque\b/.test(name)) return "Mosque";
+      return "Mosque / surau";
+    case "christian":
+      return "Church";
+    case "buddhist":
+      return "Buddhist temple";
+    case "taoist":
+    case "chinese_folk":
+    case "confucian":
+      return "Chinese temple";
+    case "hindu":
+      return "Hindu temple";
+    case "sikh":
+      return "Gurdwara";
+    default:
+      return "Place of worship";
+  }
+}
+
 /** Which category (and short kind) do these tags belong to? */
 export function classify(tags: Record<string, string>): { category: CategoryId; sub: string } | null {
   for (const cat of CATEGORIES) {
     for (const [k, v, label] of cat.rules) {
-      if (tags[k] === v) return { category: cat.id, sub: label };
+      if (tags[k] === v) return { category: cat.id, sub: cat.id === "worship" ? worshipKind(tags) : label };
     }
   }
   return null;

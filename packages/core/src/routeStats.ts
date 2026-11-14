@@ -10,11 +10,11 @@ import { snapToRoute } from "./snap";
  * a guide, never a guarantee. Toll PRICES are not in this data at all.
  */
 export interface RouteFeatures {
-  signals: { distanceAlongM: number }[];
+  signals: { distanceAlongM: number; lat: number; lng: number }[];
   /** Speed cameras mapped on OpenStreetMap. NOT the official AWAS list. */
-  cameras: { distanceAlongM: number; maxspeed?: string }[];
+  cameras: { distanceAlongM: number; lat: number; lng: number; maxspeed?: string }[];
   /** Toll plazas the route passes through, one entry per plaza. */
-  tolls: { distanceAlongM: number; name: string }[];
+  tolls: { distanceAlongM: number; lat: number; lng: number; name: string }[];
 }
 
 export const MAX_STATS_ROUTE_M = 250_000;
@@ -114,9 +114,9 @@ export function countRouteFeatures(route: Route, json: unknown): RouteFeatures {
     const limit = kind === "toll" ? 45 : 25;
     if (s.offRouteM > limit) continue;
 
-    if (kind === "signal") res.signals.push({ distanceAlongM: s.distanceAlongM });
-    else if (kind === "camera") res.cameras.push({ distanceAlongM: s.distanceAlongM, maxspeed: t.maxspeed });
-    else res.tolls.push({ distanceAlongM: s.distanceAlongM, name: t.name ?? t.operator ?? "Toll plaza" });
+    if (kind === "signal") res.signals.push({ distanceAlongM: s.distanceAlongM, lat, lng });
+    else if (kind === "camera") res.cameras.push({ distanceAlongM: s.distanceAlongM, lat, lng, maxspeed: t.maxspeed });
+    else res.tolls.push({ distanceAlongM: s.distanceAlongM, lat, lng, name: t.name ?? t.operator ?? "Toll plaza" });
   }
   return {
     signals: dedupe(res.signals, 40),

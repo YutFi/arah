@@ -12,8 +12,10 @@ import {
   type NavUpdate,
   type Poi,
   type Route,
+  DEFAULT_RADIUS_M,
 } from "@arah/core";
 import { MapView, type MapHandle } from "./components/MapView";
+import { buildMarks } from "./lib/routeMarks";
 import { SearchPanel } from "./components/SearchPanel";
 import { RoutePreview } from "./components/RoutePreview";
 import { NavHud } from "./components/NavHud";
@@ -418,7 +420,12 @@ export default function App() {
   );
   const browse = phase === "browse";
   const showSearchHere =
-    browse && !selPlace && nearby.active.length > 0 && nearby.status !== "loading" && !!viewCenter && !!nearby.center && haversine(viewCenter, nearby.center) > 1000;
+    browse && !selPlace && nearby.active.length > 0 && nearby.status !== "loading" && !!viewCenter && !!nearby.center && haversine(viewCenter, nearby.center) > DEFAULT_RADIUS_M / 2;
+  const routeMarks = useMemo(() => {
+    if (phase !== "preview" || stats.status !== "loaded") return null;
+    const f = stats.list[sel];
+    return f ? buildMarks(f) : null;
+  }, [phase, stats, sel]);
   const placeDistance = selPlace && nearbyFrom !== null && geo.fix ? haversine(geo.fix, selPlace) : null;
 
   return (
@@ -436,6 +443,7 @@ export default function App() {
         selectedPoiId={selPlace?.kind === "poi" ? selPlace.id : null}
         onPoiClick={(p) => showPlace(poiToPlace(p))}
         onLongPress={dropPin}
+        marks={routeMarks}
         onMoveEnd={(c) => {
           if (phaseRef.current === "browse") setViewCenter(c);
         }}

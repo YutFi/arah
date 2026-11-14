@@ -30,7 +30,10 @@ export function Splash({ onDone }: { onDone: () => void }) {
         <div className="splash-word">Arah</div>
         <div className="splash-tag">Navigate Malaysia, privately.</div>
       </div>
-      <div className="splash-foot">Open source · No account · No tracking</div>
+      <div className="splash-foot">
+        <div className="splash-made">Made by Yutfi</div>
+        <div>Open source · No account · No tracking</div>
+      </div>
     </div>
   );
 }

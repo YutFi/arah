@@ -6,6 +6,10 @@ export const CATEGORY_UI: Record<CategoryId, { color: string; icon: string }> = 
     color: "#f59e0b",
     icon: '<rect x="5" y="3" width="9" height="18" rx="1.5"/><path d="M7.5 7.5h4M14 8h2.5A1.5 1.5 0 0 1 18 9.5V16a1.5 1.5 0 0 0 3 0V8l-2.5-2.5"/>',
   },
+  worship: {
+    color: "#0d9488",
+    icon: '<path d="M3 21h18M5 21V11.5L12 7l7 4.5V21"/><path d="M12 7V3.5M10.2 5h3.6M10 21v-5a2 2 0 0 1 4 0v5"/>',
+  },
   food: {
     color: "#ef4444",
     icon: '<path d="M6 3v6a2.5 2.5 0 0 0 5 0V3M8.5 3v18M17 21V3c-2.5 1.5-3.5 4.5-3.5 8H17"/>',

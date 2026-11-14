@@ -10,3 +10,4 @@ export * from "./places";
 export * from "./query";
 export * from "./routeStats";
 export * from "./tiles";
+export * from "./tolls";

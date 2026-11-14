@@ -12,6 +12,12 @@ import {
   nearestPerCategory,
   parseCoordinates,
   parseOverpass,
+  DEFAULT_RADIUS_M,
+  OSM_EXTRACT_RULES,
+  OSM_KEEP_TAGS,
+  TOLL_RATES,
+  estimateTolls,
+  findTollRate,
 } from "./index";
 
 describe("nearby places", () => {
@@ -162,6 +168,76 @@ import {
   poiToRow,
   ROAD_CELL_DEG,
 } from "./index";
+
+describe("places of worship", () => {
+  it("tells mosque, church and temples apart from the religion tag", () => {
+    const base = { amenity: "place_of_worship" };
+    expect(classify({ ...base, religion: "muslim", name: "Masjid Negeri" })).toEqual({ category: "worship", sub: "Mosque" });
+    expect(classify({ ...base, religion: "muslim", name: "Surau Al-Hidayah" })?.sub).toBe("Surau");
+    expect(classify({ ...base, religion: "muslim", name: "Al-Ikhlas" })?.sub).toBe("Mosque / surau");
+    expect(classify({ ...base, religion: "christian", name: "St Mary" })?.sub).toBe("Church");
+    expect(classify({ ...base, religion: "buddhist", name: "Kek Lok Si" })?.sub).toBe("Buddhist temple");
+    expect(classify({ ...base, religion: "taoist", name: "X" })?.sub).toBe("Chinese temple");
+    expect(classify({ ...base, religion: "hindu", name: "Sri Maha" })?.sub).toBe("Hindu temple");
+    expect(classify({ ...base, religion: "sikh", name: "Gurdwara" })?.sub).toBe("Gurdwara");
+    expect(classify({ ...base, name: "No religion tag" })?.sub).toBe("Place of worship");
+  });
+
+  it("searches places of worship, requires a name, and covers 5 km", () => {
+    expect(DEFAULT_RADIUS_M).toBe(5000);
+    const q = buildOverpassQuery({ lat: 3.1, lng: 101.7 }, DEFAULT_RADIUS_M, ["worship"]);
+    expect(q).toContain('"amenity"~"^(place_of_worship)$"]["name"]');
+    expect(q).toContain("around:5000");
+  });
+
+  it("the data pipeline keeps the religion tag", () => {
+    expect(OSM_KEEP_TAGS).toContain("religion");
+    expect(OSM_EXTRACT_RULES).toContainEqual(["amenity", "place_of_worship"]);
+  });
+});
+
+describe("toll estimate", () => {
+  it("every price has two sources and a check date", () => {
+    for (const r of TOLL_RATES) {
+      expect(r.sourceUrl).toMatch(/^https:\/\//);
+      expect(r.checkedWith).toMatch(/^https:\/\//);
+      expect(r.checkedWith).not.toBe(r.sourceUrl);
+      expect(r.verifiedOn).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+      expect(r.rm).toBeGreaterThan(0);
+    }
+  });
+
+  it("no two records can match the same plaza name", () => {
+    for (const r of TOLL_RATES) expect(findTollRate(`Plaza Tol ${r.plaza}`)?.plaza).toBe(r.plaza);
+  });
+
+  it("matches common ways the map names a plaza", () => {
+    expect(findTollRate("Plaza Tol Penchala")?.rm).toBe(2.1);
+    expect(findTollRate("Penchala Toll Plaza")?.rm).toBe(2.1);
+    expect(findTollRate("Gombak Toll")?.rm).toBe(6);
+    expect(findTollRate("Plaza Tol Mines (North & South)")?.rm).toBe(1.85);
+    expect(findTollRate("Plaza Tol Salak Selatan")?.rm).toBe(2);
+  });
+
+  it("refuses to guess: unknown, ambiguous or look-alike names get no price", () => {
+    expect(findTollRate("Plaza Tol Damansara")).toBeNull(); // shared by several highways
+    expect(findTollRate("Plaza Tol Sungai Besi")).toBeNull();
+    expect(findTollRate("Penchala Link")).toBeNull();
+    expect(findTollRate("Salak")).toBeNull();
+    expect(findTollRate("")).toBeNull();
+    expect(findTollRate("Toll plaza")).toBeNull();
+  });
+
+  it("adds up only what is priced and says what is missing", () => {
+    const e = estimateTolls([{ name: "Plaza Tol Penchala" }, { name: "Plaza Tol Sungai Besi" }, { name: "Gombak" }]);
+    expect(e.totalRm).toBe(8.1);
+    expect(e.priced.map((p) => p.name)).toEqual(["Penchala", "Gombak"]);
+    expect(e.unpriced).toEqual(["Plaza Tol Sungai Besi"]);
+    expect(e.complete).toBe(false);
+    expect(estimateTolls([{ name: "Gombak" }]).complete).toBe(true);
+    expect(estimateTolls([]).complete).toBe(false);
+  });
+});
 
 describe("map data tiles", () => {
   it("gives the same cell for the same point and covers a circle", () => {

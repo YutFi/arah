@@ -7,6 +7,7 @@ import workerUrl from "maplibre-gl/dist/maplibre-gl-worker.mjs?url";
 import type { LatLng, Poi, Route } from "@arah/core";
 import { config } from "../lib/config";
 import { CATEGORY_UI, iconSvg } from "../lib/categories";
+import type { RouteMarks } from "../lib/routeMarks";
 
 export interface MapHandle {
   getCenter(): LatLng;
@@ -36,14 +37,30 @@ interface Props {
   onLongPress: (p: LatLng) => void;
   /** The map stopped moving. */
   onMoveEnd: (center: LatLng) => void;
+  /** Traffic lights, cameras and toll plazas on the chosen route (route preview only). */
+  marks: RouteMarks | null;
 }
 
 maplibregl.setWorkerUrl(workerUrl);
 
+/** Lights are small dots; draw at most this many so a very long route stays smooth. */
+const MAX_LIGHT_MARKERS = 400;
+
+const markSvgAttrs = 'viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"';
+
+/**
+ * Room kept for a sheet earlier (place card) is still on the camera. fitBounds
+ * adds its own padding on top, and when the two together are taller than the
+ * screen MapLibre refuses to move at all ("cannot fit within canvas"). Start clean.
+ */
+function clearCameraPadding(m: maplibregl.Map) {
+  m.setPadding({ top: 0, bottom: 0, left: 0, right: 0 });
+}
+
 const toLine = (r: Route) => r.points.map((p) => [p.lng, p.lat] as [number, number]);
 
 export const MapView = forwardRef<MapHandle, Props>(function MapView(
-  { routes, selected, dest, user, navigating, follow, onUserMove, pois, selectedPoiId, onPoiClick, onLongPress, onMoveEnd },
+  { routes, selected, dest, user, navigating, follow, onUserMove, pois, selectedPoiId, onPoiClick, onLongPress, onMoveEnd, marks },
   ref,
 ) {
   const el = useRef<HTMLDivElement>(null);
@@ -57,7 +74,9 @@ export const MapView = forwardRef<MapHandle, Props>(function MapView(
   const onMove = useRef(onUserMove);
   onMove.current = onUserMove;
   const poiMarkers = useRef(new Map<string, maplibregl.Marker>());
-  const cb = useRef({ onPoiClick, onLongPress, onMoveEnd });
+  const markMarkers = useRef<maplibregl.Marker[]>([]);
+  const lastRoutes = useRef<Route[] | null>(null);
+    const cb = useRef({ onPoiClick, onLongPress, onMoveEnd });
   cb.current = { onPoiClick, onLongPress, onMoveEnd };
 
   useImperativeHandle(ref, () => ({
@@ -74,6 +93,7 @@ export const MapView = forwardRef<MapHandle, Props>(function MapView(
       if (!m || points.length === 0) return;
       const b = new maplibregl.LngLatBounds();
       for (const p of points) b.extend([p.lng, p.lat]);
+      clearCameraPadding(m);
       m.fitBounds(b, { padding: { top: 190, bottom: bottom + 30, left: 40, right: 40 }, maxZoom: 16, duration: 700 });
     },
     focus(point, bottom) {
@@ -182,6 +202,8 @@ export const MapView = forwardRef<MapHandle, Props>(function MapView(
       destMarker.current?.remove();
       for (const mk of poiMarkers.current.values()) mk.remove();
       poiMarkers.current.clear();
+      for (const mk of markMarkers.current) mk.remove();
+      markMarkers.current = [];
       m.remove();
       map.current = null;
       ready.current = false;
@@ -204,16 +226,58 @@ export const MapView = forwardRef<MapHandle, Props>(function MapView(
     });
   }
 
-  // ---- routes: draw, and frame them when previewing -------------------------
+  // ---- routes: draw them. New routes: frame all of them. Picking one: zoom to it ----
   useEffect(() => {
     pushRoutes();
     const m = map.current;
+    const routesChanged = lastRoutes.current !== routes;
+    lastRoutes.current = routes;
     if (!m || navigating || routes.length === 0) return;
+    const chosen = routes[selected] ?? routes[0];
+    const shown = routesChanged || !chosen ? routes : [chosen];
     const b = new maplibregl.LngLatBounds();
-    for (const r of routes) for (const p of r.points) b.extend([p.lng, p.lat]);
-    m.fitBounds(b, { padding: { top: 90, bottom: 380, left: 36, right: 36 }, maxZoom: 16, duration: 700 });
+    for (const r of shown) for (const p of r.points) b.extend([p.lng, p.lat]);
+    clearCameraPadding(m);
+    // The route sheet is at most 52% of the screen tall; keep the route above it.
+    const bottom = Math.round(window.innerHeight * 0.52) + 24;
+    m.fitBounds(b, { padding: { top: 90, bottom, left: 36, right: 36 }, maxZoom: 17, duration: 700 });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [routes, selected]);
+
+  // ---- route marks: lights (dots), cameras and toll plazas (pins) -----------
+  useEffect(() => {
+    const m = map.current;
+    if (!m) return;
+    for (const mk of markMarkers.current) mk.remove();
+    markMarkers.current = [];
+    if (!marks) return;
+    const add = (node: HTMLElement, lat: number, lng: number) =>
+      markMarkers.current.push(new maplibregl.Marker({ element: node }).setLngLat([lng, lat]).addTo(m));
+    for (const p of marks.signals.slice(0, MAX_LIGHT_MARKERS)) {
+      const node = document.createElement("div");
+      node.className = "mark signal";
+      node.setAttribute("role", "img");
+      node.setAttribute("aria-label", "Traffic light");
+      add(node, p.lat, p.lng);
+    }
+    for (const c of marks.cameras) {
+      const node = document.createElement("div");
+      node.className = "mark camera";
+      node.setAttribute("role", "img");
+      node.setAttribute("aria-label", c.maxspeed ? `Speed camera mapped on OpenStreetMap, limit ${c.maxspeed}` : "Speed camera mapped on OpenStreetMap");
+      node.innerHTML = `<svg ${markSvgAttrs} width="15" height="15"><path d="M4 8h3l1.5-2h7L17 8h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>`;
+      add(node, c.lat, c.lng);
+    }
+    for (const t of marks.tolls) {
+      const node = document.createElement("div");
+      node.className = `mark toll${t.rm != null ? " priced" : ""}`;
+      node.setAttribute("role", "img");
+      node.setAttribute("aria-label", t.rm != null ? `Toll plaza ${t.name}, about RM ${t.rm.toFixed(2)}` : `Toll plaza ${t.name}, price not available`);
+      node.innerHTML = `<svg ${markSvgAttrs} width="14" height="14"><path d="M3 20h18M6 20V9l6-5 6 5v11M10 20v-6h4v6"/></svg>${t.rm != null ? `<span>RM ${t.rm.toFixed(2)}</span>` : ""}`;
+      add(node, t.lat, t.lng);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [marks]);
 
   // ---- destination pin ------------------------------------------------------
   useEffect(() => {

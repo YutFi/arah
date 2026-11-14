@@ -1,4 +1,4 @@
-import { formatArrival, formatDistance, formatDuration, type Route } from "@arah/core";
+import { estimateTolls, formatArrival, TOLL_DATA_CHECKED_ON, formatDistance, formatDuration, type Route } from "@arah/core";
 import type { Place } from "../lib/geocode";
 import type { StatsState } from "../lib/routeStats";
 
@@ -26,7 +26,7 @@ export function RoutePreview(p: Props) {
   const best = p.routes[0]?.durationS ?? 0;
 
   return (
-    <div className="sheet" style={{ paddingBottom: "max(16px, env(safe-area-inset-bottom))" }}>
+    <div className="sheet" style={{ paddingBottom: "max(16px, env(safe-area-inset-bottom))", maxHeight: "52dvh" }}>
       <div className="sheet-head">
         <div>
           <div className="sheet-title">{p.dest.name}</div>
@@ -69,6 +69,8 @@ export function RoutePreview(p: Props) {
         })}
       </div>
 
+      <RouteDetails stats={p.stats} index={p.selected} />
+
       <label className="toggle">
         <input type="checkbox" checked={p.avoidTolls} onChange={(e) => p.onToggleTolls(e.target.checked)} />
         <span>Avoid toll roads where possible</span>
@@ -76,7 +78,7 @@ export function RoutePreview(p: Props) {
 
       <div className="foot-note">
         Times use typical road speeds, not live traffic. Lights, cameras and toll plazas are counted from OpenStreetMap
-        volunteers, so real numbers can be higher. The camera count is not the official AWAS list. Toll prices are not available yet.
+        volunteers, so real numbers can be higher. The camera count is not the official AWAS list.
       </div>
 
       <div className="actions">
@@ -100,7 +102,7 @@ function RouteFacts({ route, stats, index, awas }: { route: Route; stats: StatsS
   const wait = stats.status === "loading";
   const none = stats.status === "error" || (stats.status === "loaded" && !f);
   const tolls = f?.tolls ?? [];
-  const names = tolls.map((t) => t.name).filter((n) => n !== "Toll plaza");
+  const est = estimateTolls(tolls);
   return (
     <div className="facts">
       <span className="fact" title="Traffic lights mapped on OpenStreetMap along this route">
@@ -115,10 +117,55 @@ function RouteFacts({ route, stats, index, awas }: { route: Route; stats: StatsS
       {(route.hasToll || tolls.length > 0) && (
         <span className="fact toll">
           <span aria-hidden>🛣️</span> Toll
-          {tolls.length > 0 ? `: ${plural(tolls.length, "plaza", "plazas")}${names.length ? ` (${names.slice(0, 3).join(", ")}${names.length > 3 ? "…" : ""})` : ""}` : " road"}
-          {" · price not available yet"}
+          {tolls.length === 0
+            ? " road · plazas not counted"
+            : est.priced.length > 0
+              ? `: about RM ${est.totalRm.toFixed(2)}${est.complete ? "" : ` + ${plural(est.unpriced.length, "plaza", "plazas")} unpriced`}`
+              : `: ${plural(tolls.length, "plaza", "plazas")} · price not available`}
         </span>
       )}
     </div>
+  );
+}
+
+/** Legend for the map symbols, and the toll breakdown, for the chosen route. */
+function RouteDetails({ stats, index }: { stats: StatsState; index: number }) {
+  const f = stats.status === "loaded" ? stats.list[index] : null;
+  if (!f) return null;
+  const est = estimateTolls(f.tolls);
+  return (
+    <>
+      <div className="legend" aria-label="Map symbols">
+        <span><i className="l-signal" />Traffic light</span>
+        <span><i className="l-camera" />Speed camera (OpenStreetMap)</span>
+        <span><i className="l-toll" />Toll plaza</span>
+      </div>
+      {f.tolls.length > 0 && (
+        <details className="toll-box">
+          <summary>
+            <b>Toll estimate, car (Class 1)</b>
+            {est.priced.length > 0 ? ` · about RM ${est.totalRm.toFixed(2)}${est.complete ? "" : " so far"}` : " · no price available"}
+          </summary>
+          <ul>
+            {est.priced.map((t) => (
+              <li key={t.name}>
+                <span>{t.name} <span className="na">· {t.highway}</span></span>
+                <span>RM {t.rm.toFixed(2)}</span>
+              </li>
+            ))}
+            {est.unpriced.map((n, i) => (
+              <li key={`${n}-${i}`}>
+                <span>{n}</span>
+                <span className="na">price not available</span>
+              </li>
+            ))}
+          </ul>
+          <div className="why">
+            Prices come from public rate lists that agree with each other, checked on {TOLL_DATA_CHECKED_ON}, and may be out of date.
+            Highways that charge by distance (such as PLUS) are not priced here; check the exact fare with the operator or the LLM toll calculator.
+          </div>
+        </details>
+      )}
+    </>
   );
 }

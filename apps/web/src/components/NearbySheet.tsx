@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { CATEGORIES, formatDistance, haversine, type LatLng, type Poi } from "@arah/core";
+import { CATEGORIES, DEFAULT_RADIUS_M, formatDistance, haversine, type LatLng, type Poi } from "@arah/core";
 import { CatIcon, CATEGORY_UI } from "../lib/categories";
 
 interface Props {
@@ -30,7 +30,7 @@ export function NearbySheet({ pois, from, fromYou, status, error, activeCount, o
         <div>
           <div className="sheet-title">{fromYou ? "Near you" : "Around the map centre"}</div>
           <div className="sheet-sub">
-            Nearest first, within 2 km. From OpenStreetMap: no ratings or busy times.
+            Nearest first, within {DEFAULT_RADIUS_M / 1000} km. From OpenStreetMap: no ratings or busy times.
           </div>
         </div>
         <button className="icon-btn" aria-label="Hide places" onClick={onClose}>✕</button>
@@ -48,7 +48,7 @@ export function NearbySheet({ pois, from, fromYou, status, error, activeCount, o
         </div>
       )}
       {status === "idle" && activeCount > 0 && pois.length === 0 && (
-        <div className="note">Nothing mapped within 2 km. Move the map and tap “Search this area”.</div>
+        <div className="note">Nothing mapped within {DEFAULT_RADIUS_M / 1000} km. Move the map and tap “Search this area”.</div>
       )}
 
       <ul className="poi-list">

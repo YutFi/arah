@@ -174,7 +174,7 @@ export const OSM_EXTRACT_RULES: readonly (readonly [string, string])[] = [
 export const OSM_KEEP_TAGS: readonly string[] = [
   ...new Set([
     "name", "name:en", "brand", "operator", "opening_hours", "phone", "contact:phone",
-    "addr:housenumber", "addr:street", "addr:suburb", "addr:city", "maxspeed",
+    "addr:housenumber", "addr:street", "addr:suburb", "addr:city", "maxspeed", "religion",
     ...OSM_EXTRACT_RULES.map(([k]) => k),
   ]),
 ];

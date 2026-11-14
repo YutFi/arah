@@ -5,13 +5,13 @@ A privacy-first, open-source navigation app for Malaysia that runs in the phone'
 **Try it on your phone: https://yutfi.github.io/arah/**
 (iPhone: open in Safari, then Share → Add to Home Screen. Android: open in Chrome, then menu → Install app. Allow location when asked.)
 
-> **Status: early preview.** Navigation basics work. Live traffic, toll prices, speed-camera data and speed limits do **not** exist yet, and the app says so on screen instead of guessing.
+> **Status: early preview.** Navigation basics work. Live traffic, complete toll prices, official speed-camera data and speed limits do **not** exist yet, and the app says so on screen instead of guessing.
 
 ## What works now
 
 - Map, current location, and search by place name, street address (falls back to the nearest area and says so) or coordinates; the result is pinned on the map first, with a Directions button. Long-press the map to drop your own pin
-- Nearby petrol, restaurants, entertainment, hotspots and attractions as icons on the map, from a pre-built OpenStreetMap snapshot that loads instantly (refreshed weekly; no ratings or busy times)
-- Routes with alternatives, arrival time, "avoid tolls", and per route: traffic lights, mapped speed cameras and toll plazas counted from OpenStreetMap (volunteer data, can be incomplete; no toll price yet)
+- Nearby petrol, places of worship (mosque/surau, church, Chinese, Buddhist and Hindu temples, gurdwara), restaurants, entertainment, hotspots and attractions within 5 km as icons on the map, from a pre-built OpenStreetMap snapshot that loads instantly (refreshed weekly; no ratings or busy times)
+- Routes with alternatives, arrival time, "avoid tolls", and per route: traffic lights, mapped speed cameras and toll plazas counted from OpenStreetMap (volunteer data, can be incomplete). The chosen route shows them as markers on the map, and flat-rate toll plazas get a price estimate when they are on a small sourced list (`packages/core/src/tolls.ts`)
 - Turn-by-turn directions with voice, current speed, rerouting when you leave the route, screen kept awake
 - **Simulate drive** mode, so you can test navigation without driving
 - AWAS speed-camera alert engine, built and tested, but fed by an **empty** dataset because no verified records exist yet (see `data/README.md`)
@@ -21,7 +21,7 @@ A privacy-first, open-source navigation app for Malaysia that runs in the phone'
 | Feature | State |
 | --- | --- |
 | Live traffic | Not available. See `docs/LIVE-TRAFFIC.md` for what exists and what to do next |
-| Toll prices | Not started. No free, verified rates dataset found. Rates differ per plaza, and closed systems (e.g. PLUS) charge per entry and exit. Needs a hand-checked dataset with a source link for every rate |
+| Toll prices | Partial. About a dozen flat-rate plazas (Class 1 car) are priced, each from two public rate lists that agree, with source links and a check date in the code. No official machine-readable rates dataset exists. Closed systems (PLUS, ECE...) charge per entry and exit and are not priced. More plazas can be added only with two sources each |
 | AWAS camera locations | Engine done, data empty. Route cards show cameras mapped on OpenStreetMap instead (not the official list, no spoken alerts from it) |
 | Speed limits | Not started |
 | Background navigation | Not possible in a web app (phones stop it). Needs the native apps later |
