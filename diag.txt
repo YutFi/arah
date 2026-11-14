@@ -1,0 +1,177 @@
+ENTRY 1 node=12383713955 2.15829,102.65904 name=AWAS Pagoh - Northbound
+    {'way': 319717034, 'd_m': 0.1, 'brg': 302, 'hw': 'motorway', 'name': 'Lebuhraya Utara–Selatan', 'ref': 'E2', 'oneway': 'yes', 'maxspeed': '110', 'lanes': '2'}
+    {'way': 586595431, 'd_m': 19.5, 'brg': 122, 'hw': 'motorway', 'name': 'Lebuhraya Utara–Selatan', 'ref': 'E2', 'oneway': 'yes', 'maxspeed': '110', 'lanes': '2'}
+ENTRY 2 node=12389362167 2.1498,102.69803 name=KM 146.8 Lebuhraya PLUS – Pagoh (SB)
+    {'way': 816733570, 'd_m': 0.1, 'brg': 116, 'hw': 'motorway', 'name': 'Lebuhraya Utara–Selatan', 'ref': 'E2', 'oneway': 'yes', 'maxspeed': '110', 'lanes': '2'}
+    {'way': 771451198, 'd_m': 19.2, 'brg': 296, 'hw': 'motorway', 'name': 'Lebuhraya Utara–Selatan', 'ref': 'E2', 'oneway': 'yes', 'maxspeed': '110', 'lanes': '2'}
+    {'way': 657558696, 'd_m': 29.9, 'brg': 115, 'hw': 'services', 'name': 'Kawasan Rehat Pagoh Arah Utara', 'ref': None, 'oneway': None, 'maxspeed': None, 'lanes': None}
+    {'way': 558232477, 'd_m': 30.6, 'brg': 296, 'hw': 'unclassified', 'name': None, 'ref': None, 'oneway': None, 'maxspeed': None, 'lanes': None}
+ENTRY 3 node=10738516098 1.52748,103.75383 name=KM 1 Lebuhraya PLUS - Johor Bahru (NB)
+    {'way': 770065761, 'd_m': 0.3, 'brg': 298, 'hw': 'motorway', 'name': 'Lebuhraya Utara–Selatan', 'ref': 'E2', 'oneway': 'yes', 'maxspeed': '110', 'lanes': '2'}
+    {'way': 319830321, 'd_m': 14.4, 'brg': 117, 'hw': 'motorway', 'name': 'Lebuhraya Utara–Selatan', 'ref': 'E2', 'oneway': 'yes', 'maxspeed': '110', 'lanes': '2'}
+    {'way': 812909178, 'd_m': 28.1, 'brg': 116, 'hw': 'unclassified', 'name': 'Jalan Kangkar Tebrau', 'ref': None, 'oneway': None, 'maxspeed': None, 'lanes': None}
+    {'way': 770744305, 'd_m': 47.7, 'brg': 115, 'hw': 'unclassified', 'name': 'Jalan Dewani 5', 'ref': None, 'oneway': None, 'maxspeed': None, 'lanes': None}
+    {'way': 421733736, 'd_m': 49.9, 'brg': 131, 'hw': 'tertiary', 'name': 'Jalan Persisiran Purnama', 'ref': None, 'oneway': None, 'maxspeed': None, 'lanes': None}
+    {'way': 152600110, 'd_m': 50.1, 'brg': 310, 'hw': 'tertiary', 'name': 'Jalan Persisiran Purnama', 'ref': None, 'oneway': 'yes', 'maxspeed': None, 'lanes': None}
+    {'way': 152600111, 'd_m': 50.1, 'brg': 160, 'hw': 'tertiary', 'name': 'Jalan Persisiran Purnama', 'ref': None, 'oneway': 'yes', 'maxspeed': None, 'lanes': None}
+    {'way': 319830323, 'd_m': 77.2, 'brg': 116, 'hw': 'motorway', 'name': 'Lebuhraya Utara–Selatan', 'ref': 'E2', 'oneway': 'yes', 'maxspeed': '110', 'lanes': '2'}
+    {'way': 767702204, 'd_m': 79.2, 'brg': 261, 'hw': 'trunk', 'name': 'Lebuhraya Pasir Gudang', 'ref': '17', 'oneway': 'yes', 'maxspeed': None, 'lanes': '3'}
+ENTRY 4 node=12109692963 1.52754,103.754 name=KM 1 Lebuhraya PLUS - Johor Bahru (SB)
+    {'way': 319830321, 'd_m': 0.2, 'brg': 117, 'hw': 'motorway', 'name': 'Lebuhraya Utara–Selatan', 'ref': 'E2', 'oneway': 'yes', 'maxspeed': '110', 'lanes': '2'}
+    {'way': 770065761, 'd_m': 14.2, 'brg': 297, 'hw': 'motorway', 'name': 'Lebuhraya Utara–Selatan', 'ref': 'E2', 'oneway': 'yes', 'maxspeed': '110', 'lanes': '2'}
+    {'way': 421733736, 'd_m': 32.8, 'brg': 127, 'hw': 'tertiary', 'name': 'Jalan Persisiran Purnama', 'ref': None, 'oneway': None, 'maxspeed': None, 'lanes': None}
+    {'way': 152600110, 'd_m': 35.5, 'brg': 310, 'hw': 'tertiary', 'name': 'Jalan Persisiran Purnama', 'ref': None, 'oneway': 'yes', 'maxspeed': None, 'lanes': None}
+    {'way': 152600111, 'd_m': 35.5, 'brg': 160, 'hw': 'tertiary', 'name': 'Jalan Persisiran Purnama', 'ref': None, 'oneway': 'yes', 'maxspeed': None, 'lanes': None}
+    {'way': 812909178, 'd_m': 42.4, 'brg': 116, 'hw': 'unclassified', 'name': 'Jalan Kangkar Tebrau', 'ref': None, 'oneway': None, 'maxspeed': None, 'lanes': None}
+    {'way': 770744305, 'd_m': 61.8, 'brg': 115, 'hw': 'unclassified', 'name': 'Jalan Dewani 5', 'ref': None, 'oneway': None, 'maxspeed': None, 'lanes': None}
+    {'way': 767702204, 'd_m': 75.7, 'brg': 261, 'hw': 'trunk', 'name': 'Lebuhraya Pasir Gudang', 'ref': '17', 'oneway': 'yes', 'maxspeed': None, 'lanes': '3'}
+ENTRY 5 node=6120175280 2.43302,102.20533 name=KM 214.4 Lebuhraya PLUS, Alor Gajah (SB)
+    {'way': 319661542, 'd_m': 0.1, 'brg': 143, 'hw': 'motorway', 'name': 'Lebuhraya Utara–Selatan', 'ref': 'E2', 'oneway': 'yes', 'maxspeed': '110', 'lanes': '3'}
+    {'way': 319670961, 'd_m': 16.2, 'brg': 322, 'hw': 'motorway', 'name': 'Lebuhraya Utara–Selatan', 'ref': 'E2', 'oneway': 'yes', 'maxspeed': '110', 'lanes': '3'}
+ENTRY 6 node=6120175279 2.43332,102.20491 name=KM 214.4 Lebuhraya PLUS, Alor Gajah (NB)
+    {'way': 319670961, 'd_m': 0.3, 'brg': 322, 'hw': 'motorway', 'name': 'Lebuhraya Utara–Selatan', 'ref': 'E2', 'oneway': 'yes', 'maxspeed': '110', 'lanes': '3'}
+    {'way': 319661542, 'd_m': 17.4, 'brg': 143, 'hw': 'motorway', 'name': 'Lebuhraya Utara–Selatan', 'ref': 'E2', 'oneway': 'yes', 'maxspeed': '110', 'lanes': '3'}
+ENTRY 7 node=36363022 2.2841,102.40884 name=KM 184.2 Lebuhraya PLUS, Jasin (NB)
+    {'way': 770027974, 'd_m': 0.2, 'brg': 274, 'hw': 'motorway', 'name': 'Lebuhraya Utara–Selatan', 'ref': 'E2', 'oneway': 'yes', 'maxspeed': '110', 'lanes': '2'}
+    {'way': 769682154, 'd_m': 13.8, 'brg': 94, 'hw': 'motorway', 'name': 'Lebuhraya Utara–Selatan', 'ref': 'E2', 'oneway': 'yes', 'maxspeed': '110', 'lanes': '2'}
+    {'way': 657773819, 'd_m': 22.2, 'brg': 59, 'hw': 'rest_area', 'name': 'Hentian Sebelah Kampung Bemban', 'ref': None, 'oneway': None, 'maxspeed': None, 'lanes': None}
+    {'way': 35730625, 'd_m': 30.1, 'brg': 88, 'hw': 'motorway_link', 'name': None, 'ref': None, 'oneway': 'yes', 'maxspeed': None, 'lanes': None}
+ENTRY 8 node=6110021790 2.28449,102.40265 name=KM 185 Lebuhraya PLUS, Jasin (SB)
+    {'way': 770033227, 'd_m': 0.0, 'brg': 92, 'hw': 'motorway', 'name': 'Lebuhraya Utara–Selatan', 'ref': 'E2', 'oneway': 'yes', 'maxspeed': '110', 'lanes': '2'}
+    {'way': 770027974, 'd_m': 15.5, 'brg': 272, 'hw': 'motorway', 'name': 'Lebuhraya Utara–Selatan', 'ref': 'E2', 'oneway': 'yes', 'maxspeed': '110', 'lanes': '2'}
+    {'way': 650396403, 'd_m': 43.5, 'brg': 285, 'hw': 'residential', 'name': None, 'ref': None, 'oneway': None, 'maxspeed': None, 'lanes': None}
+    {'way': 649002084, 'd_m': 63.6, 'brg': 272, 'hw': 'residential', 'name': None, 'ref': None, 'oneway': None, 'maxspeed': None, 'lanes': None}
+ENTRY 11 node=33504292 2.86802,101.63862 name=AWAS ELITE - Northbound
+    {'way': 1165378225, 'd_m': 0.1, 'brg': 327, 'hw': 'motorway', 'name': 'Lebuhraya Utara–Selatan Hubungan Tengah', 'ref': 'E6', 'oneway': 'yes', 'maxspeed': '110', 'lanes': '3'}
+    {'way': 15806631, 'd_m': 15.1, 'brg': 147, 'hw': 'motorway', 'name': 'Lebuhraya Utara–Selatan Hubungan Tengah', 'ref': 'E6', 'oneway': 'yes', 'maxspeed': '110', 'lanes': '3'}
+ENTRY 12 node=12252412840 2.95567,101.58506 name=AWAS ELITE Highway - Southbound
+    {'way': 1165362577, 'd_m': 0.5, 'brg': 147, 'hw': 'motorway', 'name': 'Lebuhraya Utara–Selatan Hubungan Tengah', 'ref': 'E6', 'oneway': 'yes', 'maxspeed': '110', 'lanes': '3'}
+    {'way': 1165362176, 'd_m': 13.0, 'brg': 326, 'hw': 'motorway', 'name': 'Lebuhraya Utara–Selatan Hubungan Tengah', 'ref': 'E6', 'oneway': 'yes', 'maxspeed': '110', 'lanes': '3'}
+    {'way': 393564817, 'd_m': 55.0, 'brg': 148, 'hw': 'unclassified', 'name': 'Jalan TPP 3', 'ref': None, 'oneway': None, 'maxspeed': None, 'lanes': None}
+    {'way': 393564818, 'd_m': 55.8, 'brg': 50, 'hw': 'unclassified', 'name': 'Jalan TPP 16', 'ref': None, 'oneway': None, 'maxspeed': None, 'lanes': None}
+    {'way': 393564819, 'd_m': 67.3, 'brg': 118, 'hw': 'unclassified', 'name': None, 'ref': None, 'oneway': None, 'maxspeed': None, 'lanes': None}
+    {'way': 1324050008, 'd_m': 67.3, 'brg': 358, 'hw': 'residential', 'name': 'Jalan SP 11/1', 'ref': None, 'oneway': 'yes', 'maxspeed': None, 'lanes': None}
+ENTRY 13 node=13110085647 3.39783,101.5488 name=AES Bukit Beruntung - Southbound
+    {'way': 430154468, 'd_m': 0.1, 'brg': 143, 'hw': 'motorway', 'name': 'Lebuhraya Utara–Selatan', 'ref': 'E1', 'oneway': 'yes', 'maxspeed': '110', 'lanes': '3'}
+    {'way': 318965265, 'd_m': 12.7, 'brg': 322, 'hw': 'motorway', 'name': 'Lebuhraya Utara–Selatan', 'ref': 'E1', 'oneway': 'yes', 'maxspeed': '110', 'lanes': '3'}
+    {'way': 430154469, 'd_m': 55.1, 'brg': 146, 'hw': 'motorway', 'name': 'Lebuhraya Utara–Selatan', 'ref': 'E1', 'oneway': 'yes', 'maxspeed': '110', 'lanes': '3'}
+    {'way': 430154467, 'd_m': 58.8, 'brg': 324, 'hw': 'motorway', 'name': 'Lebuhraya Utara–Selatan', 'ref': 'E1', 'oneway': 'yes', 'maxspeed': '110', 'lanes': '3'}
+ENTRY 16 node=10694135234 5.11354,100.54604 name=AES Bandar Baharu - Northbound
+    {'way': 46330481, 'd_m': 0.2, 'brg': 275, 'hw': 'motorway', 'name': 'Lebuhraya Utara–Selatan', 'ref': 'E1', 'oneway': 'yes', 'maxspeed': '110', 'lanes': '2'}
+    {'way': 568512419, 'd_m': 11.5, 'brg': 95, 'hw': 'motorway', 'name': 'Lebuhraya Utara–Selatan', 'ref': 'E1', 'oneway': 'yes', 'maxspeed': '110', 'lanes': '2'}
+    {'way': 758769453, 'd_m': 24.9, 'brg': 278, 'hw': 'residential', 'name': None, 'ref': None, 'oneway': None, 'maxspeed': None, 'lanes': None}
+    {'way': 886699280, 'd_m': 54.1, 'brg': 5, 'hw': 'unclassified', 'name': None, 'ref': None, 'oneway': None, 'maxspeed': None, 'lanes': None}
+    {'way': 448169259, 'd_m': 67.5, 'brg': 141, 'hw': 'residential', 'name': None, 'ref': None, 'oneway': 'no', 'maxspeed': None, 'lanes': '1'}
+    {'way': 448169246, 'd_m': 70.3, 'brg': 168, 'hw': 'residential', 'name': None, 'ref': None, 'oneway': 'no', 'maxspeed': None, 'lanes': '1'}
+    {'way': 568518922, 'd_m': 71.0, 'brg': 93, 'hw': 'residential', 'name': None, 'ref': None, 'oneway': None, 'maxspeed': None, 'lanes': None}
+    {'way': 448169235, 'd_m': 76.5, 'brg': 175, 'hw': 'residential', 'name': None, 'ref': None, 'oneway': 'no', 'maxspeed': None, 'lanes': '1'}
+ENTRY 18 node=12383760728 3.83606,101.42172 name=AES Slim River - Northbound
+    {'way': 501141696, 'd_m': 0.3, 'brg': 323, 'hw': 'motorway', 'name': 'Lebuhraya Utara–Selatan', 'ref': 'E1', 'oneway': 'yes', 'maxspeed': '110', 'lanes': '3'}
+    {'way': 144869375, 'd_m': 11.9, 'brg': 142, 'hw': 'motorway', 'name': 'Lebuhraya Utara–Selatan', 'ref': 'E1', 'oneway': 'yes', 'maxspeed': '110', 'lanes': '3'}
+ENTRY 19 node=9626165816 4.90533,100.66815 name=AES Taiping - Northbound
+    {'way': 445962732, 'd_m': 0.2, 'brg': 13, 'hw': 'motorway', 'name': 'Lebuhraya Utara–Selatan', 'ref': 'E1', 'oneway': 'yes', 'maxspeed': '110', 'lanes': '2'}
+    {'way': 783924768, 'd_m': 10.5, 'brg': 193, 'hw': 'motorway', 'name': 'Lebuhraya Utara–Selatan', 'ref': 'E1', 'oneway': 'yes', 'maxspeed': '110', 'lanes': '2'}
+    {'way': 784275068, 'd_m': 19.5, 'brg': 1, 'hw': 'unclassified', 'name': None, 'ref': None, 'oneway': 'no', 'maxspeed': None, 'lanes': '2'}
+    {'way': 246194463, 'd_m': 31.8, 'brg': 16, 'hw': 'unclassified', 'name': None, 'ref': None, 'oneway': None, 'maxspeed': None, 'lanes': None}
+    {'way': 245852443, 'd_m': 44.7, 'brg': 138, 'hw': 'trunk', 'name': None, 'ref': '1', 'oneway': None, 'maxspeed': None, 'lanes': '4'}
+    {'way': 138891316, 'd_m': 44.8, 'brg': 139, 'hw': 'trunk', 'name': None, 'ref': '1', 'oneway': None, 'maxspeed': None, 'lanes': '4'}
+ENTRY 30 node=7558328324 4.95872,102.07486 name=AES Gua Musang
+    {'way': 138299379, 'd_m': 0.5, 'brg': 84, 'hw': 'trunk', 'name': 'Jalan Kota Bharu – Gua Musang', 'ref': '8', 'oneway': None, 'maxspeed': None, 'lanes': '2'}
+    {'way': 450615526, 'd_m': 47.5, 'brg': 86, 'hw': 'unclassified', 'name': None, 'ref': None, 'oneway': 'no', 'maxspeed': None, 'lanes': None}
+ENTRY 32 node=3555274675 5.81823,100.48899 name=KM 1, Jalan Gurun – Sik / Kuala Muda (arah Gurun)
+    {'way': 1499262973, 'd_m': 0.3, 'brg': 271, 'hw': 'primary', 'name': None, 'ref': '175', 'oneway': 'yes', 'maxspeed': None, 'lanes': '2'}
+    {'way': 349682311, 'd_m': 12.7, 'brg': 91, 'hw': 'primary', 'name': None, 'ref': '175', 'oneway': 'yes', 'maxspeed': None, 'lanes': '2'}
+    {'way': 504796553, 'd_m': 13.2, 'brg': 242, 'hw': 'motorway_link', 'name': None, 'ref': None, 'oneway': 'yes', 'maxspeed': None, 'lanes': '1'}
+    {'way': 305088322, 'd_m': 39.7, 'brg': 181, 'hw': 'motorway_link', 'name': None, 'ref': None, 'oneway': 'yes', 'maxspeed': None, 'lanes': None}
+    {'way': 391261309, 'd_m': 39.8, 'brg': 270, 'hw': 'primary', 'name': None, 'ref': '175', 'oneway': 'yes', 'maxspeed': None, 'lanes': '2'}
+    {'way': 391261311, 'd_m': 41.7, 'brg': 91, 'hw': 'primary', 'name': None, 'ref': '175', 'oneway': 'yes', 'maxspeed': None, 'lanes': '2'}
+    {'way': 349682299, 'd_m': 47.7, 'brg': 269, 'hw': 'primary', 'name': None, 'ref': '175', 'oneway': 'yes', 'maxspeed': None, 'lanes': '2'}
+    {'way': 391261367, 'd_m': 47.7, 'brg': 1, 'hw': 'motorway_link', 'name': None, 'ref': None, 'oneway': 'yes', 'maxspeed': None, 'lanes': None}
+    {'way': 687705234, 'd_m': 47.7, 'brg': 0, 'hw': 'motorway_link', 'name': None, 'ref': None, 'oneway': 'yes', 'maxspeed': None, 'lanes': None}
+    {'way': 391261313, 'd_m': 49.4, 'brg': 90, 'hw': 'primary', 'name': None, 'ref': '175', 'oneway': 'yes', 'maxspeed': None, 'lanes': '2'}
+    {'way': 504796551, 'd_m': 54.4, 'brg': 345, 'hw': 'motorway_link', 'name': None, 'ref': None, 'oneway': 'yes', 'maxspeed': None, 'lanes': '1'}
+    {'way': 687705233, 'd_m': 76.6, 'brg': 176, 'hw': 'motorway_link', 'name': None, 'ref': None, 'oneway': 'yes', 'maxspeed': None, 'lanes': None}
+ENTRY 33 node=5339362996 5.81835,100.4882 name=KM 1, Jalan Gurun – Sik / Kuala Muda (arah Sik)
+    {'way': 391261313, 'd_m': 0.4, 'brg': 90, 'hw': 'primary', 'name': None, 'ref': '175', 'oneway': 'yes', 'maxspeed': None, 'lanes': '2'}
+    {'way': 349682299, 'd_m': 14.1, 'brg': 271, 'hw': 'primary', 'name': None, 'ref': '175', 'oneway': 'yes', 'maxspeed': None, 'lanes': '2'}
+    {'way': 504796551, 'd_m': 20.7, 'brg': 293, 'hw': 'motorway_link', 'name': None, 'ref': None, 'oneway': 'yes', 'maxspeed': None, 'lanes': '1'}
+    {'way': 391261311, 'd_m': 39.9, 'brg': 91, 'hw': 'primary', 'name': None, 'ref': '175', 'oneway': 'yes', 'maxspeed': None, 'lanes': '2'}
+    {'way': 391261367, 'd_m': 39.9, 'brg': 1, 'hw': 'motorway_link', 'name': None, 'ref': None, 'oneway': 'yes', 'maxspeed': None, 'lanes': None}
+    {'way': 391261309, 'd_m': 42.1, 'brg': 270, 'hw': 'primary', 'name': None, 'ref': '175', 'oneway': 'yes', 'maxspeed': None, 'lanes': '2'}
+    {'way': 687705234, 'd_m': 42.1, 'brg': 0, 'hw': 'motorway_link', 'name': None, 'ref': None, 'oneway': 'yes', 'maxspeed': None, 'lanes': None}
+    {'way': 305088322, 'd_m': 47.9, 'brg': 181, 'hw': 'motorway_link', 'name': None, 'ref': None, 'oneway': 'yes', 'maxspeed': None, 'lanes': None}
+    {'way': 349682311, 'd_m': 47.9, 'brg': 91, 'hw': 'primary', 'name': None, 'ref': '175', 'oneway': 'yes', 'maxspeed': None, 'lanes': '2'}
+    {'way': 1499262973, 'd_m': 49.7, 'brg': 269, 'hw': 'primary', 'name': None, 'ref': '175', 'oneway': 'yes', 'maxspeed': None, 'lanes': '2'}
+    {'way': 504796553, 'd_m': 60.1, 'brg': 214, 'hw': 'motorway_link', 'name': None, 'ref': None, 'oneway': 'yes', 'maxspeed': None, 'lanes': '1'}
+ENTRY 35 node=4924613763 4.58254,101.08221 name=AES Jalan Pasir Putih
+    {'way': 707612193, 'd_m': 0.2, 'brg': 161, 'hw': 'primary', 'name': 'Jalan Pasir Puteh', 'ref': 'A268', 'oneway': 'yes', 'maxspeed': '40', 'lanes': None}
+    {'way': 760707778, 'd_m': 10.6, 'brg': 342, 'hw': 'primary', 'name': 'Jalan Pasir Puteh', 'ref': 'A268', 'oneway': 'yes', 'maxspeed': '40', 'lanes': None}
+    {'way': 707612194, 'd_m': 13.0, 'brg': 164, 'hw': 'primary', 'name': 'Jalan Pasir Puteh', 'ref': 'A268', 'oneway': 'yes', 'maxspeed': '40', 'lanes': None}
+    {'way': 707612190, 'd_m': 15.3, 'brg': 161, 'hw': 'primary', 'name': 'Jalan Pasir Puteh', 'ref': 'A268', 'oneway': 'yes', 'maxspeed': '40', 'lanes': None}
+    {'way': 707612191, 'd_m': 18.6, 'brg': 340, 'hw': 'primary', 'name': 'Jalan Pasir Puteh', 'ref': 'A268', 'oneway': 'yes', 'maxspeed': '40', 'lanes': None}
+    {'way': 760707777, 'd_m': 47.6, 'brg': 78, 'hw': 'unclassified', 'name': None, 'ref': None, 'oneway': 'yes', 'maxspeed': None, 'lanes': None}
+    {'way': 760707773, 'd_m': 47.7, 'brg': 173, 'hw': 'primary', 'name': 'Jalan Pasir Puteh', 'ref': 'A268', 'oneway': 'yes', 'maxspeed': '40', 'lanes': None}
+    {'way': 760707774, 'd_m': 47.7, 'brg': 78, 'hw': 'unclassified', 'name': 'Jalan King', 'ref': None, 'oneway': 'yes', 'maxspeed': None, 'lanes': None}
+    {'way': 760707767, 'd_m': 48.3, 'brg': 77, 'hw': 'unclassified', 'name': 'Jalan Temenggong', 'ref': None, 'oneway': 'yes', 'maxspeed': None, 'lanes': None}
+    {'way': 760707770, 'd_m': 48.3, 'brg': 352, 'hw': 'primary', 'name': 'Jalan Pasir Puteh', 'ref': 'A268', 'oneway': 'yes', 'maxspeed': '40', 'lanes': None}
+    {'way': 92670835, 'd_m': 55.5, 'brg': 260, 'hw': 'unclassified', 'name': 'Jalan King', 'ref': None, 'oneway': 'yes', 'maxspeed': None, 'lanes': None}
+    {'way': 760707775, 'd_m': 55.5, 'brg': 257, 'hw': 'unclassified', 'name': 'Jalan King', 'ref': None, 'oneway': 'yes', 'maxspeed': None, 'lanes': None}
+    {'way': 760707776, 'd_m': 55.5, 'brg': 184, 'hw': 'primary', 'name': 'Jalan Pasir Puteh', 'ref': 'A268', 'oneway': 'yes', 'maxspeed': '40', 'lanes': None}
+    {'way': 501747636, 'd_m': 56.3, 'brg': 257, 'hw': 'unclassified', 'name': 'Jalan Temenggong', 'ref': None, 'oneway': 'yes', 'maxspeed': None, 'lanes': None}
+    {'way': 785340272, 'd_m': 56.3, 'brg': 5, 'hw': 'primary', 'name': 'Jalan Pasir Puteh', 'ref': 'A268', 'oneway': 'yes', 'maxspeed': '40', 'lanes': None}
+ENTRY 36 node=2539785532 4.81654,101.07839 name=AES KM 26 Jalan Ipoh-Kuala Kangsar
+    {'way': 1470789904, 'd_m': 0.0, 'brg': 297, 'hw': 'trunk', 'name': 'Jalan Tun Dr. S. Samy Vellu', 'ref': '1', 'oneway': 'yes', 'maxspeed': '90', 'lanes': None}
+    {'way': 782861085, 'd_m': 11.0, 'brg': 297, 'hw': 'unclassified', 'name': None, 'ref': None, 'oneway': None, 'maxspeed': None, 'lanes': None}
+    {'way': 1470789890, 'd_m': 12.1, 'brg': 117, 'hw': 'trunk', 'name': 'Jalan Tun Dr. S. Samy Vellu', 'ref': '1', 'oneway': 'yes', 'maxspeed': '90', 'lanes': None}
+    {'way': 782828693, 'd_m': 15.9, 'brg': 145, 'hw': 'trunk_link', 'name': None, 'ref': None, 'oneway': 'yes', 'maxspeed': None, 'lanes': None}
+    {'way': 1470789891, 'd_m': 43.1, 'brg': 214, 'hw': 'secondary', 'name': None, 'ref': 'A19', 'oneway': None, 'maxspeed': None, 'lanes': None}
+    {'way': 1470789892, 'd_m': 43.5, 'brg': 297, 'hw': 'trunk', 'name': 'Jalan Tun Dr. S. Samy Vellu', 'ref': '1', 'oneway': 'yes', 'maxspeed': '90', 'lanes': None}
+    {'way': 1470789893, 'd_m': 43.5, 'brg': 28, 'hw': 'unclassified', 'name': None, 'ref': None, 'oneway': None, 'maxspeed': None, 'lanes': None}
+    {'way': 1470789886, 'd_m': 43.6, 'brg': 116, 'hw': 'trunk', 'name': 'Jalan Tun Dr. S. Samy Vellu', 'ref': '1', 'oneway': 'yes', 'maxspeed': '90', 'lanes': None}
+    {'way': 1470789889, 'd_m': 43.6, 'brg': 217, 'hw': 'secondary', 'name': None, 'ref': 'A19', 'oneway': None, 'maxspeed': None, 'lanes': None}
+    {'way': 782861084, 'd_m': 45.1, 'brg': 28, 'hw': 'unclassified', 'name': None, 'ref': None, 'oneway': None, 'maxspeed': None, 'lanes': None}
+    {'way': 1470789895, 'd_m': 45.1, 'brg': 297, 'hw': 'unclassified', 'name': None, 'ref': None, 'oneway': None, 'maxspeed': None, 'lanes': None}
+    {'way': 782828694, 'd_m': 56.9, 'brg': 64, 'hw': 'trunk_link', 'name': None, 'ref': None, 'oneway': 'yes', 'maxspeed': None, 'lanes': None}
+    {'way': 949393788, 'd_m': 58.9, 'brg': 217, 'hw': 'secondary', 'name': None, 'ref': 'A19', 'oneway': None, 'maxspeed': None, 'lanes': None}
+ENTRY 45 node=4924613744 3.08604,101.67354 name=AES Jalan Klang Lama
+    {'way': 778110653, 'd_m': 0.3, 'brg': 207, 'hw': 'primary', 'name': 'Jalan Klang Lama', 'ref': None, 'oneway': 'yes', 'maxspeed': '60', 'lanes': '5'}
+    {'way': 778909507, 'd_m': 10.8, 'brg': 27, 'hw': 'primary_link', 'name': None, 'ref': None, 'oneway': 'yes', 'maxspeed': None, 'lanes': '2'}
+    {'way': 778098253, 'd_m': 15.9, 'brg': 24, 'hw': 'primary_link', 'name': None, 'ref': None, 'oneway': 'yes', 'maxspeed': None, 'lanes': '2'}
+    {'way': 778307026, 'd_m': 20.7, 'brg': 28, 'hw': 'primary', 'name': 'Jalan Klang Lama', 'ref': None, 'oneway': 'yes', 'maxspeed': '60', 'lanes': '3'}
+    {'way': 702604727, 'd_m': 28.9, 'brg': 199, 'hw': 'primary', 'name': 'Jalan Klang Lama', 'ref': None, 'oneway': 'yes', 'maxspeed': '60', 'lanes': '4'}
+    {'way': 778098255, 'd_m': 54.7, 'brg': 113, 'hw': 'primary_link', 'name': None, 'ref': None, 'oneway': 'yes', 'maxspeed': None, 'lanes': '2'}
+    {'way': 778909508, 'd_m': 54.7, 'brg': 120, 'hw': 'tertiary', 'name': 'Jalan Sepadu', 'ref': None, 'oneway': 'yes', 'maxspeed': None, 'lanes': '2'}
+    {'way': 876048019, 'd_m': 54.7, 'brg': 210, 'hw': 'primary', 'name': 'Jalan Klang Lama', 'ref': None, 'oneway': 'yes', 'maxspeed': '60', 'lanes': '5'}
+    {'way': 141460198, 'd_m': 59.1, 'brg': 42, 'hw': 'primary_link', 'name': None, 'ref': None, 'oneway': 'yes', 'maxspeed': None, 'lanes': '2'}
+    {'way': 778098254, 'd_m': 59.1, 'brg': 343, 'hw': 'primary_link', 'name': None, 'ref': None, 'oneway': 'yes', 'maxspeed': None, 'lanes': '2'}
+    {'way': 612140490, 'd_m': 64.4, 'brg': 122, 'hw': 'tertiary', 'name': 'Jalan Sepadu', 'ref': None, 'oneway': 'yes', 'maxspeed': None, 'lanes': '3'}
+    {'way': 778098257, 'd_m': 65.0, 'brg': 301, 'hw': 'tertiary', 'name': 'Jalan Sepadu', 'ref': None, 'oneway': 'yes', 'maxspeed': None, 'lanes': '2'}
+    {'way': 780248935, 'd_m': 65.0, 'brg': 209, 'hw': 'primary', 'name': 'Jalan Klang Lama', 'ref': None, 'oneway': 'yes', 'maxspeed': '60', 'lanes': '4'}
+    {'way': 612140491, 'd_m': 67.2, 'brg': 299, 'hw': 'tertiary', 'name': 'Jalan Sepadu', 'ref': None, 'oneway': 'yes', 'maxspeed': None, 'lanes': '2'}
+ENTRY 46 node=2539785544 3.17724,101.68701 name=AES Jalan Ipoh
+    {'way': 775036736, 'd_m': 0.3, 'brg': 310, 'hw': 'primary', 'name': 'Jalan Sultan Azlan Shah', 'ref': None, 'oneway': 'yes', 'maxspeed': None, 'lanes': '4'}
+    {'way': 1148713826, 'd_m': 11.4, 'brg': 132, 'hw': 'primary', 'name': 'Jalan Sultan Azlan Shah', 'ref': None, 'oneway': 'yes', 'maxspeed': None, 'lanes': '3'}
+    {'way': 775036730, 'd_m': 19.4, 'brg': 163, 'hw': 'primary_link', 'name': None, 'ref': None, 'oneway': 'yes', 'maxspeed': None, 'lanes': '1'}
+    {'way': 775133027, 'd_m': 19.4, 'brg': 131, 'hw': 'primary', 'name': 'Jalan Sultan Azlan Shah', 'ref': None, 'oneway': 'yes', 'maxspeed': None, 'lanes': '3'}
+    {'way': 1148713825, 'd_m': 31.7, 'brg': 214, 'hw': 'tertiary', 'name': 'Jalan Perhentian', 'ref': None, 'oneway': 'yes', 'maxspeed': None, 'lanes': '2'}
+    {'way': 1148713827, 'd_m': 31.7, 'brg': 313, 'hw': 'primary', 'name': 'Jalan Sultan Azlan Shah', 'ref': None, 'oneway': 'yes', 'maxspeed': None, 'lanes': '4'}
+    {'way': 667605297, 'd_m': 35.0, 'brg': 134, 'hw': 'primary', 'name': 'Jalan Sultan Azlan Shah', 'ref': None, 'oneway': 'yes', 'maxspeed': None, 'lanes': '3'}
+    {'way': 775036731, 'd_m': 35.0, 'brg': 223, 'hw': 'tertiary', 'name': 'Jalan Perhentian', 'ref': None, 'oneway': 'yes', 'maxspeed': None, 'lanes': '2'}
+    {'way': 775127854, 'd_m': 39.9, 'brg': 312, 'hw': 'primary', 'name': 'Jalan Sultan Azlan Shah', 'ref': None, 'oneway': 'yes', 'maxspeed': None, 'lanes': '3'}
+    {'way': 160442619, 'd_m': 40.0, 'brg': 208, 'hw': 'secondary', 'name': 'Sentul Link', 'ref': None, 'oneway': 'yes', 'maxspeed': None, 'lanes': '2'}
+    {'way': 775036729, 'd_m': 41.3, 'brg': 207, 'hw': 'tertiary', 'name': 'Jalan Perhentian', 'ref': None, 'oneway': 'yes', 'maxspeed': None, 'lanes': '3'}
+    {'way': 160442618, 'd_m': 47.1, 'brg': 31, 'hw': 'secondary', 'name': 'Sentul Link', 'ref': None, 'oneway': 'yes', 'maxspeed': None, 'lanes': '2'}
+    {'way': 188181103, 'd_m': 52.8, 'brg': 313, 'hw': 'primary', 'name': 'Jalan Sultan Azlan Shah', 'ref': None, 'oneway': 'yes', 'maxspeed': None, 'lanes': '3'}
+    {'way': 775036732, 'd_m': 52.8, 'brg': 31, 'hw': 'tertiary', 'name': 'Jalan Perhentian', 'ref': None, 'oneway': 'yes', 'maxspeed': None, 'lanes': '1'}
+    {'way': 188181169, 'd_m': 54.4, 'brg': 205, 'hw': 'secondary', 'name': 'Sentul Link', 'ref': None, 'oneway': 'yes', 'maxspeed': None, 'lanes': '2'}
+    {'way': 227738747, 'd_m': 54.7, 'brg': 222, 'hw': 'residential', 'name': None, 'ref': None, 'oneway': 'yes', 'maxspeed': None, 'lanes': None}
+    {'way': 776548673, 'd_m': 55.6, 'brg': 312, 'hw': 'primary', 'name': 'Jalan Sultan Azlan Shah', 'ref': None, 'oneway': 'yes', 'maxspeed': None, 'lanes': '3'}
+    {'way': 775062523, 'd_m': 56.4, 'brg': 33, 'hw': 'tertiary', 'name': 'Jalan Perhentian', 'ref': None, 'oneway': 'yes', 'maxspeed': None, 'lanes': '2'}
+    {'way': 776549118, 'd_m': 56.4, 'brg': 129, 'hw': 'primary', 'name': 'Jalan Sultan Azlan Shah', 'ref': None, 'oneway': 'yes', 'maxspeed': None, 'lanes': '3'}
+    {'way': 1148713831, 'd_m': 59.0, 'brg': 207, 'hw': 'tertiary', 'name': 'Jalan Perhentian', 'ref': None, 'oneway': 'yes', 'maxspeed': None, 'lanes': '3'}
+    {'way': 775036734, 'd_m': 60.9, 'brg': 69, 'hw': 'primary_link', 'name': None, 'ref': None, 'oneway': 'yes', 'maxspeed': None, 'lanes': '2'}
+    {'way': 1148713828, 'd_m': 60.9, 'brg': 28, 'hw': 'tertiary', 'name': 'Jalan Perhentian', 'ref': None, 'oneway': 'yes', 'maxspeed': None, 'lanes': '2'}
+    {'way': 776548672, 'd_m': 61.3, 'brg': 130, 'hw': 'primary', 'name': 'Jalan Sultan Azlan Shah', 'ref': None, 'oneway': 'yes', 'maxspeed': None, 'lanes': '3'}
+    {'way': 1148713833, 'd_m': 72.5, 'brg': 222, 'hw': 'residential', 'name': None, 'ref': None, 'oneway': 'yes', 'maxspeed': None, 'lanes': None}
+    {'way': 1187203667, 'd_m': 72.9, 'brg': 312, 'hw': 'primary', 'name': 'Jalan Sultan Azlan Shah', 'ref': None, 'oneway': 'yes', 'maxspeed': None, 'lanes': '3'}
+    {'way': 775036735, 'd_m': 75.6, 'brg': 133, 'hw': 'primary', 'name': 'Jalan Sultan Azlan Shah', 'ref': None, 'oneway': 'yes', 'maxspeed': None, 'lanes': '4'}
