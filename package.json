@@ -1,0 +1,20 @@
+{
+  "name": "arah",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Privacy-first, open-source navigation for Malaysia (working name: Arah).",
+  "license": "MIT",
+  "workspaces": ["packages/*", "apps/*"],
+  "scripts": {
+    "dev": "npm run dev -w @arah/web",
+    "build": "npm run build -w @arah/web",
+    "test": "npm run test -w @arah/core",
+    "typecheck": "npm run typecheck -w @arah/core && npm run typecheck -w @arah/web",
+    "validate-data": "tsx scripts/validate-data.ts",
+    "check": "npm run typecheck && npm test && npm run validate-data && npm run build"
+  },
+  "devDependencies": {
+    "tsx": "^4.23.0",
+    "typescript": "^5.9.0"
+  }
+}
