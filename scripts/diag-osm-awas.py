@@ -15,6 +15,7 @@ for o in fp:
     if not o.location.valid():
         continue
     lat, lon = o.location.lat, o.location.lon
+    t['_id'] = o.id
     if not (0.8 < lat < 7.5 and 99 < lon < 120):
         continue
     if t.get("highway") == "milestone" or t.get("railway") == "milestone" or ("distance" in t and t.get("highway") in (None, "milestone")):
