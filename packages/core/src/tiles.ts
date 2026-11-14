@@ -9,8 +9,8 @@ import { CATEGORIES, parseOverpass, type CategoryId, type Poi } from "./places";
  * Built from an OpenStreetMap extract by scripts/build-osm-data.sh.
  */
 
-/** Places of interest: ~11 km squares. */
-export const POI_CELL_DEG = 0.1;
+/** Places of interest: ~5.5 km squares (small files; a 5 km search touches a few of them). */
+export const POI_CELL_DEG = 0.05;
 /** Traffic lights, cameras, toll booths: ~28 km squares. */
 export const ROAD_CELL_DEG = 0.25;
 
@@ -174,7 +174,7 @@ export const OSM_EXTRACT_RULES: readonly (readonly [string, string])[] = [
 export const OSM_KEEP_TAGS: readonly string[] = [
   ...new Set([
     "name", "name:en", "brand", "operator", "opening_hours", "phone", "contact:phone",
-    "addr:housenumber", "addr:street", "addr:suburb", "addr:city", "maxspeed", "religion",
+    "addr:housenumber", "addr:street", "addr:suburb", "addr:city", "maxspeed", "religion", "network",
     ...OSM_EXTRACT_RULES.map(([k]) => k),
   ]),
 ];

@@ -1,4 +1,5 @@
-import { estimateTolls, formatArrival, TOLL_DATA_CHECKED_ON, formatDistance, formatDuration, type Route } from "@arah/core";
+import { estimateTolls, formatArrival, TOLL_DATA_CHECKED_ON, formatDistance, type Route } from "@arah/core";
+import { fmtDuration, tn, useT } from "../lib/i18n";
 import type { Place } from "../lib/geocode";
 import type { StatsState } from "../lib/routeStats";
 
@@ -22,6 +23,7 @@ interface Props {
 }
 
 export function RoutePreview(p: Props) {
+  const { t } = useT();
   const now = new Date();
   const best = p.routes[0]?.durationS ?? 0;
 
@@ -32,17 +34,17 @@ export function RoutePreview(p: Props) {
           <div className="sheet-title">{p.dest.name}</div>
           {p.dest.detail && <div className="sheet-sub">{p.dest.detail}</div>}
         </div>
-        <button className="icon-btn" aria-label="Cancel" onClick={p.onCancel}>✕</button>
+        <button className="icon-btn" aria-label={t("route.cancel")} onClick={p.onCancel}>✕</button>
       </div>
 
       {!p.startsFromGps && (
         <div className="note">
-          Starting from the middle of the map because your location is not available.{" "}
-          <button className="link" onClick={p.onUseLocation}>Use my location</button>
+          {t("route.startMid")}{" "}
+          <button className="link" onClick={p.onUseLocation}>{t("route.useLoc")}</button>
         </div>
       )}
 
-      {p.loading && <div className="note">Finding routes…</div>}
+      {p.loading && <div className="note">{t("route.finding")}</div>}
       {p.error && <div className="note error">{p.error}</div>}
 
       <div className="route-list">
@@ -56,12 +58,12 @@ export function RoutePreview(p: Props) {
               aria-pressed={i === p.selected}
             >
               <div className="route-main">
-                <span className="route-time">{formatDuration(r.durationS)}</span>
+                <span className="route-time">{fmtDuration(r.durationS)}</span>
                 <span className="route-dist">{formatDistance(r.lengthM)}</span>
               </div>
               <div className="route-meta">
-                <span>Arrive {formatArrival(now, r.durationS)}</span>
-                {i === 0 ? <span className="tag">Recommended</span> : extra > 0 ? <span className="tag muted">+{extra} min</span> : null}
+                <span>{t("route.arrive", { t: formatArrival(now, r.durationS) })}</span>
+                {i === 0 ? <span className="tag">{t("route.recommended")}</span> : extra > 0 ? <span className="tag muted">{t("route.plus", { n: extra })}</span> : null}
               </div>
               <RouteFacts route={r} stats={p.stats} index={i} awas={p.awasCounts?.[i] ?? null} />
             </button>
@@ -73,55 +75,49 @@ export function RoutePreview(p: Props) {
 
       <label className="toggle">
         <input type="checkbox" checked={p.avoidTolls} onChange={(e) => p.onToggleTolls(e.target.checked)} />
-        <span>Avoid toll roads where possible</span>
+        <span>{t("route.avoidTolls")}</span>
       </label>
 
-      <div className="foot-note">
-        Times use typical road speeds, not live traffic. Lights, cameras and toll plazas are counted from OpenStreetMap
-        volunteers, so real numbers can be higher. The camera count is not the official AWAS list.
-      </div>
+      <div className="foot-note">{t("route.note")}</div>
 
       <div className="actions">
         <button className="btn primary" disabled={p.routes.length === 0} onClick={() => p.onStart(false)}>
-          Start
+          {t("route.start")}
         </button>
         <button className="btn ghost" disabled={p.routes.length === 0} onClick={() => p.onStart(true)}>
-          Simulate drive
+          {t("route.simulate")}
         </button>
       </div>
     </div>
   );
 }
 
-function plural(n: number, one: string, many: string) {
-  return `${n} ${n === 1 ? one : many}`;
-}
-
 function RouteFacts({ route, stats, index, awas }: { route: Route; stats: StatsState; index: number; awas: number | null }) {
   const f = stats.status === "loaded" ? stats.list[index] : null;
   const wait = stats.status === "loading";
   const none = stats.status === "error" || (stats.status === "loaded" && !f);
+  const { t } = useT();
   const tolls = f?.tolls ?? [];
   const est = estimateTolls(tolls);
   return (
     <div className="facts">
-      <span className="fact" title="Traffic lights mapped on OpenStreetMap along this route">
+      <span className="fact" title={t("route.legend.light")}>
         <span aria-hidden>🚦</span>{" "}
-        {f ? plural(f.signals.length, "traffic light", "traffic lights") : wait ? "Counting lights…" : none ? "Lights: not counted" : ""}
+        {f ? tn("route.light", f.signals.length) : wait ? t("route.countingLights") : none ? t("route.noLights") : ""}
       </span>
-      <span className="fact" title="Speed cameras mapped on OpenStreetMap along this route">
+      <span className="fact" title={t("route.legend.cam")}>
         <span aria-hidden>📷</span>{" "}
-        {f ? plural(f.cameras.length, "mapped speed camera", "mapped speed cameras") : wait ? "Counting cameras…" : none ? "Cameras: not counted" : ""}
-        {awas != null && awas > 0 ? ` · ${awas} verified AWAS` : ""}
+        {f ? tn("route.cam", f.cameras.length) : wait ? t("route.countingCams") : none ? t("route.noCams") : ""}
+        {awas != null && awas > 0 ? t("route.awas", { n: awas }) : ""}
       </span>
       {(route.hasToll || tolls.length > 0) && (
         <span className="fact toll">
-          <span aria-hidden>🛣️</span> Toll
+          <span aria-hidden>🛣️</span> {t("route.toll")}
           {tolls.length === 0
-            ? " road · plazas not counted"
+            ? t("route.tollNoCount")
             : est.priced.length > 0
-              ? `: about RM ${est.totalRm.toFixed(2)}${est.complete ? "" : ` + ${plural(est.unpriced.length, "plaza", "plazas")} unpriced`}`
-              : `: ${plural(tolls.length, "plaza", "plazas")} · price not available`}
+              ? t("route.tollAbout", { rm: est.totalRm.toFixed(2) }) + (est.complete ? "" : t("route.tollUnpriced", { p: tn("route.plaza", est.unpriced.length) }))
+              : t("route.tollNoPrice", { p: tn("route.plaza", tolls.length) })}
         </span>
       )}
     </div>
@@ -130,40 +126,38 @@ function RouteFacts({ route, stats, index, awas }: { route: Route; stats: StatsS
 
 /** Legend for the map symbols, and the toll breakdown, for the chosen route. */
 function RouteDetails({ stats, index }: { stats: StatsState; index: number }) {
+  const { t } = useT();
   const f = stats.status === "loaded" ? stats.list[index] : null;
   if (!f) return null;
   const est = estimateTolls(f.tolls);
   return (
     <>
-      <div className="legend" aria-label="Map symbols">
-        <span><i className="l-signal" />Traffic light</span>
-        <span><i className="l-camera" />Speed camera (OpenStreetMap)</span>
-        <span><i className="l-toll" />Toll plaza</span>
+      <div className="legend" aria-label={t("route.legend")}>
+        <span><i className="l-signal" />{t("route.legend.light")}</span>
+        <span><i className="l-camera" />{t("route.legend.cam")}</span>
+        <span><i className="l-toll" />{t("route.legend.toll")}</span>
       </div>
       {f.tolls.length > 0 && (
         <details className="toll-box">
           <summary>
-            <b>Toll estimate, car (Class 1)</b>
-            {est.priced.length > 0 ? ` · about RM ${est.totalRm.toFixed(2)}${est.complete ? "" : " so far"}` : " · no price available"}
+            <b>{t("route.tollBox")}</b>
+            {est.priced.length > 0 ? (est.complete ? t("route.tollTotal", { rm: est.totalRm.toFixed(2) }) : t("route.tollSoFar", { rm: est.totalRm.toFixed(2) })) : t("route.tollNone")}
           </summary>
           <ul>
-            {est.priced.map((t) => (
-              <li key={t.name}>
-                <span>{t.name} <span className="na">· {t.highway}</span></span>
-                <span>RM {t.rm.toFixed(2)}</span>
+            {est.priced.map((x) => (
+              <li key={x.name}>
+                <span>{x.name} <span className="na">· {x.highway}</span></span>
+                <span>RM {x.rm.toFixed(2)}</span>
               </li>
             ))}
             {est.unpriced.map((n, i) => (
               <li key={`${n}-${i}`}>
                 <span>{n}</span>
-                <span className="na">price not available</span>
+                <span className="na">{t("route.priceNA")}</span>
               </li>
             ))}
           </ul>
-          <div className="why">
-            Prices come from public rate lists that agree with each other, checked on {TOLL_DATA_CHECKED_ON}, and may be out of date.
-            Highways that charge by distance (such as PLUS) are not priced here; check the exact fare with the operator or the LLM toll calculator.
-          </div>
+          <div className="why">{t("route.tollWhy", { d: TOLL_DATA_CHECKED_ON })}</div>
         </details>
       )}
     </>

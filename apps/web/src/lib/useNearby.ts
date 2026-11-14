@@ -1,6 +1,7 @@
 import { useCallback, useRef, useState } from "react";
 import { haversine, type CategoryId, type LatLng, type Poi } from "@arah/core";
 import { fetchNearby, snap } from "./nearby";
+import { t } from "./i18n";
 
 interface Data {
   center: LatLng | null;
@@ -51,7 +52,7 @@ export function useNearby(onLoaded: (pois: Poi[], center: LatLng) => void) {
     } catch (e) {
       if ((e as Error).name === "AbortError") return;
       setStatus("error");
-      setError((e as Error).message || "Could not load places.");
+      setError((e as Error).message || t("err.places"));
     }
   }, []);
 

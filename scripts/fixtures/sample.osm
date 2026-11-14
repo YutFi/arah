@@ -7,6 +7,8 @@
   <node id="5" version="1" lat="3.1040000" lon="101.7040000"><tag k="barrier" v="toll_booth"/><tag k="name" v="Sample Plaza"/></node>
   <node id="6" version="1" lat="3.1050000" lon="101.7050000"><tag k="amenity" v="cafe"/></node>
   <node id="7" version="1" lat="3.1060000" lon="101.7060000"><tag k="amenity" v="place_of_worship"/><tag k="religion" v="muslim"/><tag k="name" v="Masjid Sample"/></node>
+  <node id="8" version="1" lat="3.1070000" lon="101.7070000"><tag k="amenity" v="pharmacy"/><tag k="name" v="Farmasi Sample"/></node>
+  <node id="9" version="1" lat="3.1080000" lon="101.7080000"><tag k="amenity" v="charging_station"/><tag k="operator" v="Sample EV"/></node>
   <node id="10" version="1" lat="3.2000000" lon="101.8000000"/>
   <node id="11" version="1" lat="3.2000000" lon="101.8020000"/>
   <node id="12" version="1" lat="3.2020000" lon="101.8020000"/>

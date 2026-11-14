@@ -7,13 +7,14 @@ export function formatDistance(m: number): string {
   return `${km < 10 ? km.toFixed(1) : Math.round(km)} km`;
 }
 
-export function formatDuration(s: number): string {
+/** `hourUnit` is "h" in English and "j" (jam) in Bahasa Melayu. */
+export function formatDuration(s: number, hourUnit = "h"): string {
   if (!Number.isFinite(s) || s < 0) return "–";
   const mins = Math.max(1, Math.round(s / 60));
   if (mins < 60) return `${mins} min`;
   const h = Math.floor(mins / 60);
   const m = mins % 60;
-  return m === 0 ? `${h} h` : `${h} h ${m} min`;
+  return m === 0 ? `${h} ${hourUnit}` : `${h} ${hourUnit} ${m} min`;
 }
 
 /** Local arrival time as HH:MM (24h). */

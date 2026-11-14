@@ -22,6 +22,7 @@ import { NavHud } from "./components/NavHud";
 import { AboutSheet } from "./components/AboutSheet";
 import { PlaceCard } from "./components/PlaceCard";
 import { NearbySheet } from "./components/NearbySheet";
+import { PrayerSheet } from "./components/PrayerSheet";
 import { Splash } from "./components/Splash";
 import { LocationHelp, LocationPrimer } from "./components/LocationHelp";
 import { onLocationPermissionChange, queryLocationPermission } from "./lib/permission";
@@ -33,6 +34,10 @@ import { reversePlace, type Place } from "./lib/geocode";
 import { useNearby } from "./lib/useNearby";
 import { fetchRouteFeatures, type StatsState } from "./lib/routeStats";
 import { config } from "./lib/config";
+import { maneuverText, useT } from "./lib/i18n";
+import { hhmm, nextPrayer } from "./lib/prayer";
+import { readShared } from "./lib/share";
+import { savePlace, type SavedPlace } from "./lib/saved";
 
 type Phase = "browse" | "preview" | "navigating";
 const SIM_SPEEDS = [50, 120, 300];
@@ -53,6 +58,7 @@ const poiToPlace = (p: Poi): Place => ({
 });
 
 export default function App() {
+  const { t, lang } = useT();
   const geo = useGeolocation();
   const mapRef = useRef<MapHandle>(null);
   const selPlaceRef = useRef<Place | null>(null);
@@ -74,6 +80,9 @@ export default function App() {
   const [rerouting, setRerouting] = useState(false);
   const [voiceOn, setVoiceOn] = useState(true);
   const [about, setAbout] = useState(false);
+  const [prayerOpen, setPrayerOpen] = useState(false);
+  const [toastMsg, setToastMsg] = useState<string | null>(null);
+  const [minute, setMinute] = useState(() => Math.floor(Date.now() / 60000));
   const [splashDone, setSplashDone] = useState(false);
   const [locUI, setLocUI] = useState<"none" | "primer" | "help">("none");
   const [awas, setAwas] = useState<AwasState>({ status: "loading", cameras: [], skipped: 0 });
@@ -111,6 +120,22 @@ export default function App() {
 
   useEffect(() => {
     void loadAwas().then(setAwas);
+  }, []);
+
+  // Spoken language follows the language setting.
+  useEffect(() => {
+    voice.lang = lang === "ms" ? "ms-MY" : "en-US";
+  }, [lang]);
+
+  // Keeps the "next prayer" chip current.
+  useEffect(() => {
+    const id = setInterval(() => setMinute(Math.floor(Date.now() / 60000)), 30000);
+    return () => clearInterval(id);
+  }, []);
+
+  const flash = useCallback((msg: string) => {
+    setToastMsg(msg);
+    setTimeout(() => setToastMsg((cur) => (cur === msg ? null : cur)), 3500);
   }, []);
 
   // ---- location permission: explain first, then ask, then guide if blocked ---
@@ -192,6 +217,25 @@ export default function App() {
     mapRef.current?.focus(p, 300);
   }, []);
 
+  // Opened from a share link (?to=lat,lng&n=Name): show that place once.
+  const sharedHandled = useRef(false);
+  useEffect(() => {
+    if (!splashDone || sharedHandled.current) return;
+    sharedHandled.current = true;
+    if (!window.location.search.includes("to=")) return;
+    const s = readShared(window.location.search);
+    if (!s) {
+      flash(t("toast.sharedBad"));
+      return;
+    }
+    try {
+      window.history.replaceState(null, "", window.location.pathname);
+    } catch {
+      /* ignore */
+    }
+    showPlace({ id: `shared-${s.lat}-${s.lng}`, name: s.name ?? t("search.pinned"), detail: "", lat: s.lat, lng: s.lng, kind: "pin", unnamed: !s.name });
+  }, [splashDone, showPlace, flash, t]);
+
   const closePlace = useCallback(() => {
     setSelPlace(null);
     mapRef.current?.clearPadding();
@@ -216,7 +260,7 @@ export default function App() {
   );
 
   // A pin the person dropped, or typed as coordinates: ask what is there.
-  const pinId = selPlace?.kind === "pin" && selPlace.name === "Pinned location" ? selPlace.id : null;
+  const pinId = selPlace?.kind === "pin" && selPlace.unnamed ? selPlace.id : null;
   useEffect(() => {
     if (!pinId) {
       setNaming(false);
@@ -229,10 +273,10 @@ export default function App() {
     reversePlace(at, ac.signal)
       .then((r) => {
         if (!r || ac.signal.aborted) return;
-        setSelPlace((cur) => (cur && cur.id === pinId ? { ...cur, name: r.name, detail: r.detail } : cur));
+        setSelPlace((cur) => (cur && cur.id === pinId ? { ...cur, name: r.name, detail: r.detail, unnamed: false } : cur));
       })
       .catch(() => {
-        /* keep "Pinned location" and the coordinates */
+        /* keep the generic pin name and the coordinates */
       })
       .finally(() => {
         if (!ac.signal.aborted) setNaming(false);
@@ -255,9 +299,9 @@ export default function App() {
   const dropPin = useCallback(
     (at: LatLng) => {
       if (phaseRef.current !== "browse") return;
-      showPlace({ id: `pin-${at.lat.toFixed(6)}-${at.lng.toFixed(6)}`, name: "Pinned location", detail: "", lat: at.lat, lng: at.lng, kind: "pin" });
+      showPlace({ id: `pin-${at.lat.toFixed(6)}-${at.lng.toFixed(6)}`, name: t("search.pinned"), detail: "", lat: at.lat, lng: at.lng, kind: "pin", unnamed: true });
     },
-    [showPlace],
+    [showPlace, t],
   );
 
   const cancelPreview = useCallback(() => {
@@ -332,7 +376,7 @@ export default function App() {
           announced.current.clear();
           setRoutes([rs[0]]);
           setSel(0);
-          voice.speak("Route updated.");
+          voice.speak(t("voice.updated"));
         }
       })
       .catch(() => {
@@ -342,7 +386,7 @@ export default function App() {
         rerouteBusy.current = false;
         setRerouting(false);
       });
-  }, [nav, simulate, dest, live, avoidTolls]);
+  }, [nav, simulate, dest, live, avoidTolls, t]);
 
   // ---- speed cameras on this route -------------------------------------------
   const cameraMatches = useMemo(
@@ -360,14 +404,14 @@ export default function App() {
     if (nav.status === "arrived") {
       if (!said.has("arrived")) {
         said.add("arrived");
-        voice.speak("You have arrived at your destination.");
+        voice.speak(t("voice.arrived"));
       }
       return;
     }
     if (alert && alert.distanceAheadM <= 500 && !said.has(`cam:${alert.camera.id}`)) {
       said.add(`cam:${alert.camera.id}`);
-      const limit = alert.camera.speedLimitKph ? `, limit ${alert.camera.speedLimitKph}` : "";
-      voice.speak(`Speed camera ahead${limit}.`);
+      const limit = alert.camera.speedLimitKph ? t("voice.camLimit", { n: alert.camera.speedLimitKph }) : "";
+      voice.speak(t("voice.cam", { limit }));
       return;
     }
     const idx = nav.nextManeuverIndex;
@@ -375,16 +419,16 @@ export default function App() {
     if (idx == null || !m || ARRIVAL_TYPES.has(m.type)) return;
     const d = nav.distanceToNextM ?? Infinity;
     const near = Math.min(250, Math.max(100, ((live?.speedMps ?? 0) || 0) * 7));
-    const text = m.verbalPre ?? m.instruction;
+    const text = lang === "ms" ? maneuverText(m) : (m.verbalPre ?? m.instruction);
     if (d <= near && !said.has(`${idx}:near`)) {
       said.add(`${idx}:near`);
       said.add(`${idx}:far`);
       voice.speak(text);
     } else if (d <= 600 && d > near && !said.has(`${idx}:far`)) {
       said.add(`${idx}:far`);
-      voice.speak(`In ${Math.max(100, Math.round(d / 100) * 100)} metres, ${text.charAt(0).toLowerCase()}${text.slice(1)}`);
+      voice.speak(t("voice.in", { n: Math.max(100, Math.round(d / 100) * 100), text: `${text.charAt(0).toLowerCase()}${text.slice(1)}` }));
     }
-  }, [nav, route, phase, alert, live?.speedMps]);
+  }, [nav, route, phase, alert, live?.speedMps, lang, t]);
 
   const onLocate = () => {
     if (geo.status === "denied") {
@@ -399,6 +443,30 @@ export default function App() {
     const next = !voiceOn;
     setVoiceOn(next);
     voice.enabled = next;
+  };
+
+  // ---- prayer times: from your position, else the map centre ------------------
+  const prayerPos: LatLng = geo.fix ? { lat: geo.fix.lat, lng: geo.fix.lng } : (viewCenter ?? config.defaultCenter);
+  const prayerLabel = useMemo(() => {
+    try {
+      const n = nextPrayer(prayerPos.lat, prayerPos.lng, new Date());
+      return `${t(`prayer.${n.id}`)} ${hhmm(n.at)}`;
+    } catch {
+      return null;
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [Math.round(prayerPos.lat * 10), Math.round(prayerPos.lng * 10), minute, lang]);
+
+  const pickSaved = (s: SavedPlace) => showPlace({ id: s.id, name: s.name, detail: "", lat: s.lat, lng: s.lng, kind: "search" });
+  const parkHere = () => {
+    if (!geo.fix) {
+      geo.start(false);
+      flash(t("saved.parkNoGps"));
+      return;
+    }
+    savePlace("parked", t("saved.parked"), geo.fix.lat, geo.fix.lng);
+    flash(t("toast.parked"));
+    showPlace({ id: `parked-${Date.now()}`, name: t("saved.parked"), detail: "", lat: geo.fix.lat, lng: geo.fix.lng, kind: "search" });
   };
 
   const maneuver = nav && route && nav.nextManeuverIndex != null ? (route.maneuvers[nav.nextManeuverIndex] ?? null) : null;
@@ -456,6 +524,10 @@ export default function App() {
           onAbout={() => setAbout(true)}
           active={nearby.active}
           onToggleCategory={toggleCategory}
+          onPrayer={() => setPrayerOpen(true)}
+          prayerLabel={prayerLabel}
+          onPickSaved={pickSaved}
+          onParkHere={parkHere}
         />
       )}
 
@@ -463,15 +535,16 @@ export default function App() {
         <div className="stack">
           <div className="stack-tools">
             {showSearchHere && viewCenter && (
-              <button className="pill" onClick={() => nearby.searchHere(viewCenter)}>Search this area</button>
+              <button className="pill" onClick={() => nearby.searchHere(viewCenter)}>{t("nearby.searchHere")}</button>
             )}
-            <button className="round" aria-label="Show my location" onClick={onLocate}>◎</button>
+            <button className="round" aria-label={t("loc.showMine")} onClick={onLocate}>◎</button>
           </div>
           {geo.status === "denied" && locUI === "none" && (
             <button className="toast" onClick={() => setLocUI("help")}>
-              Location is off. <u>Tap to turn it on.</u>
+              {t("loc.off")} <u>{t("loc.turnOn")}</u>
             </button>
           )}
+          {toastMsg && <div className="toast" role="status">{toastMsg}</div>}
           {selPlace ? (
             <PlaceCard
               place={selPlace}
@@ -493,14 +566,14 @@ export default function App() {
               onClose={nearby.clear}
             />
           ) : nearby.active.length > 0 ? (
-            <div className="sheet nearby"><div className="note">{nearby.status === "error" ? nearby.error : "Looking for places nearby…"}</div></div>
+            <div className="sheet nearby"><div className="note">{nearby.status === "error" ? nearby.error : t("nearby.loading")}</div></div>
           ) : null}
         </div>
       )}
       {phase === "preview" && (
         <button
           className="round locate top"
-          aria-label="Show my location"
+          aria-label={t("loc.showMine")}
           onClick={onLocate}
         >
           ◎
@@ -546,6 +619,7 @@ export default function App() {
       )}
 
       {about && <AboutSheet awas={awas} onClose={() => setAbout(false)} />}
+      {prayerOpen && <PrayerSheet lat={prayerPos.lat} lng={prayerPos.lng} fromYou={!!geo.fix} onClose={() => setPrayerOpen(false)} />}
 
       {locUI === "primer" && (
         <LocationPrimer

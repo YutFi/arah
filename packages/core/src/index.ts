@@ -11,3 +11,4 @@ export * from "./query";
 export * from "./routeStats";
 export * from "./tiles";
 export * from "./tolls";
+export * from "./malay";

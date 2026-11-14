@@ -18,6 +18,8 @@ import {
   TOLL_RATES,
   estimateTolls,
   findTollRate,
+  malayInstruction,
+  formatDuration,
 } from "./index";
 
 describe("nearby places", () => {
@@ -169,6 +171,32 @@ import {
   ROAD_CELL_DEG,
 } from "./index";
 
+describe("more nearby categories", () => {
+  it("finds EV charging, health, ATM, shops and parking, with the right short kinds", () => {
+    expect(classify({ amenity: "charging_station" })).toEqual({ category: "ev", sub: "EV charging" });
+    expect(classify({ amenity: "pharmacy" })?.sub).toBe("Pharmacy");
+    expect(classify({ amenity: "hospital" })?.category).toBe("health");
+    expect(classify({ amenity: "atm" })).toEqual({ category: "money", sub: "ATM" });
+    expect(classify({ shop: "convenience" })).toEqual({ category: "shop", sub: "Convenience store" });
+    expect(classify({ amenity: "parking" })?.category).toBe("parking");
+  });
+
+  it("lets EV chargers and ATMs show up with only an operator, but still requires a name for the rest", () => {
+    const q = buildOverpassQuery({ lat: 3.1, lng: 101.7 }, 3000, ["ev", "money", "health"]);
+    expect(q).toContain('nwr["amenity"~"^(charging_station)$"](around');
+    expect(q).toContain('nwr["amenity"~"^(atm|bank)$"](around');
+    expect(q).toContain('nwr["amenity"~"^(hospital|clinic|pharmacy)$"]["name"](around');
+    const found = parseOverpass({
+      elements: [
+        { type: "node", id: 1, lat: 3.1, lon: 101.7, tags: { amenity: "charging_station", network: "Charge+" } },
+        { type: "node", id: 2, lat: 3.1, lon: 101.7, tags: { amenity: "atm", operator: "Maybank" } },
+        { type: "node", id: 3, lat: 3.1, lon: 101.7, tags: { amenity: "pharmacy" } }, // no name: skipped
+      ],
+    });
+    expect(found.map((p) => p.name).sort()).toEqual(["Charge+", "Maybank"]);
+  });
+});
+
 describe("places of worship", () => {
   it("tells mosque, church and temples apart from the religion tag", () => {
     const base = { amenity: "place_of_worship" };
@@ -242,8 +270,8 @@ describe("toll estimate", () => {
 describe("map data tiles", () => {
   it("gives the same cell for the same point and covers a circle", () => {
     const p = { lat: 3.139, lng: 101.6869 };
-    expect(cellKey(p, POI_CELL_DEG)).toBe("1016_31");
-    expect(cellsForCircle(p, 2000, POI_CELL_DEG)).toContain("1016_31");
+    expect(cellKey(p, POI_CELL_DEG)).toBe("2033_62");
+    expect(cellsForCircle(p, 2000, POI_CELL_DEG)).toContain("2033_62");
     // a point right on a cell edge needs both cells
     expect(cellsForCircle({ lat: 3.1, lng: 101.6 }, 1500, POI_CELL_DEG).length).toBeGreaterThan(1);
   });
@@ -276,5 +304,25 @@ describe("map data tiles", () => {
     const back = roadTileToElements(tile);
     expect(back.map((e) => e.tags.highway ?? e.tags.barrier).sort()).toEqual(["speed_camera", "toll_booth", "traffic_signals"]);
     expect(manifest.poiCells).toEqual([cellKey({ lat: 3.1, lng: 101.7 }, POI_CELL_DEG)]);
+  });
+});
+
+describe("Bahasa Melayu directions", () => {
+  const m = (type: number, road?: string, exit?: number) => ({ type, streetNames: road ? [road] : [], roundaboutExitCount: exit });
+  it("writes turns with the road name", () => {
+    expect(malayInstruction(m(10, "Jalan Ampang"))).toBe("Belok kanan ke Jalan Ampang.");
+    expect(malayInstruction(m(15))).toBe("Belok kiri.");
+    expect(malayInstruction(m(13))).toBe("Buat pusingan U ke kiri.");
+    expect(malayInstruction(m(20, "Lebuhraya Persekutuan"))).toBe("Ambil susur keluar di sebelah kanan ke Lebuhraya Persekutuan.");
+  });
+  it("handles roundabouts, arrival and unknown types", () => {
+    expect(malayInstruction(m(26, "Jalan Tun Razak", 2))).toBe("Masuk bulatan dan ambil susur keluar kedua ke Jalan Tun Razak.");
+    expect(malayInstruction(m(26))).toBe("Masuk bulatan.");
+    expect(malayInstruction(m(5))).toBe("Anda telah sampai di destinasi, di sebelah kanan.");
+    expect(malayInstruction(m(99))).toBe("Teruskan perjalanan.");
+  });
+  it("shows hours as j in Malay", () => {
+    expect(formatDuration(4500, "j")).toBe("1 j 15 min");
+    expect(formatDuration(4500)).toBe("1 h 15 min");
   });
 });

@@ -1,4 +1,5 @@
-import { formatArrival, formatDistance, formatDuration, mpsToKph, type CameraAlert, type Maneuver, type NavUpdate } from "@arah/core";
+import { formatArrival, formatDistance, mpsToKph, type CameraAlert, type Maneuver, type NavUpdate } from "@arah/core";
+import { fmtDuration, maneuverText, useT, type Key } from "../lib/i18n";
 
 interface Props {
   nav: NavUpdate | null;
@@ -59,9 +60,10 @@ function icon(type: number): string {
   }
 }
 
-const CAMERA_LABEL = { fixed: "Speed camera", "red-light": "Red-light camera", "average-speed": "Average-speed camera" } as const;
+const CAMERA_KEY: Record<CameraAlert["camera"]["type"], Key> = { fixed: "nav.cam.fixed", "red-light": "nav.cam.red-light", "average-speed": "nav.cam.average-speed" };
 
 export function NavHud(p: Props) {
+  const { t } = useT();
   const { nav, maneuver } = p;
   const arrived = nav?.status === "arrived";
   const kph = p.simulating ? p.simSpeedKph : p.speedMps != null ? mpsToKph(p.speedMps) : null;
@@ -74,7 +76,7 @@ export function NavHud(p: Props) {
             <>
               <div className="banner-icon">⚑</div>
               <div className="banner-text">
-                <div className="banner-dist">You have arrived</div>
+                <div className="banner-dist">{t("nav.arrived")}</div>
               </div>
             </>
           ) : maneuver ? (
@@ -82,59 +84,59 @@ export function NavHud(p: Props) {
               <div className="banner-icon" aria-hidden>{icon(maneuver.type)}</div>
               <div className="banner-text">
                 <div className="banner-dist">{nav?.distanceToNextM != null ? formatDistance(nav.distanceToNextM) : ""}</div>
-                <div className="banner-instr">{maneuver.instruction}</div>
+                <div className="banner-instr">{maneuverText(maneuver)}</div>
               </div>
             </>
           ) : (
             <div className="banner-text">
-              <div className="banner-instr">Getting your position…</div>
+              <div className="banner-instr">{t("nav.getting")}</div>
             </div>
           )}
         </div>
 
         {p.alert && (
           <div className="alert" role="alert">
-            <strong>{CAMERA_LABEL[p.alert.camera.type]} ahead</strong>
+            <strong>{t("nav.camAhead", { c: t(CAMERA_KEY[p.alert.camera.type]) })}</strong>
             <span>
               {formatDistance(Math.max(0, p.alert.distanceAheadM))}
-              {p.alert.camera.speedLimitKph ? ` · limit ${p.alert.camera.speedLimitKph} km/h` : ""}
+              {p.alert.camera.speedLimitKph ? t("nav.limit", { n: p.alert.camera.speedLimitKph }) : ""}
             </span>
           </div>
         )}
-        {p.rerouting && <div className="status">Rerouting…</div>}
-        {p.gpsWeak && !p.simulating && <div className="status warn">GPS signal is weak</div>}
+        {p.rerouting && <div className="status">{t("nav.rerouting")}</div>}
+        {p.gpsWeak && !p.simulating && <div className="status warn">{t("nav.gpsWeak")}</div>}
         {p.simulating && (
           <button className="status sim" onClick={p.onSimSpeed}>
-            Simulated drive · {p.simSpeedKph} km/h · tap to change
+            {t("nav.sim", { n: p.simSpeedKph })}
           </button>
         )}
       </div>
 
       <div className="hud-side">
-        <button className={`round${p.voiceOn ? "" : " off"}`} aria-label={p.voiceOn ? "Mute voice" : "Unmute voice"} onClick={p.onVoice}>
+        <button className={`round${p.voiceOn ? "" : " off"}`} aria-label={p.voiceOn ? t("nav.mute") : t("nav.unmute")} onClick={p.onVoice}>
           {p.voiceOn ? "🔊" : "🔇"}
         </button>
         {p.showRecenter && (
-          <button className="round" aria-label="Re-centre on my position" onClick={p.onRecenter}>◎</button>
+          <button className="round" aria-label={t("nav.recenter")} onClick={p.onRecenter}>◎</button>
         )}
       </div>
 
       <div className="hud-bottom" style={{ paddingBottom: "max(12px, env(safe-area-inset-bottom))" }}>
-        <div className="speed" aria-label="Current speed">
+        <div className="speed" aria-label={t("nav.speed")}>
           <span className="speed-num">{kph ?? "–"}</span>
-          <span className="speed-unit">km/h</span>
+          <span className="speed-unit">{t("nav.kmh")}</span>
         </div>
         <div className="bar">
           {nav && !arrived ? (
             <div className="bar-stats">
-              <div><b>{formatArrival(new Date(), nav.remainingS)}</b><small>arrive</small></div>
-              <div><b>{formatDuration(nav.remainingS)}</b><small>left</small></div>
-              <div><b>{formatDistance(nav.remainingM)}</b><small>distance</small></div>
+              <div><b>{formatArrival(new Date(), nav.remainingS)}</b><small>{t("nav.arrive")}</small></div>
+              <div><b>{fmtDuration(nav.remainingS)}</b><small>{t("nav.left")}</small></div>
+              <div><b>{formatDistance(nav.remainingM)}</b><small>{t("nav.distance")}</small></div>
             </div>
           ) : (
             <div className="bar-stats" />
           )}
-          <button className="btn stop" onClick={p.onStop}>{arrived ? "Done" : "End"}</button>
+          <button className="btn stop" onClick={p.onStop}>{arrived ? t("nav.done") : t("nav.end")}</button>
         </div>
       </div>
     </>

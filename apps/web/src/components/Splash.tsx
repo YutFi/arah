@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
 import { Logo } from "./Logo";
+import { useT } from "../lib/i18n";
 
 /** Opening screen. Stays about 2 seconds, then fades out. */
 export function Splash({ onDone }: { onDone: () => void }) {
+  const { t } = useT();
   const [leaving, setLeaving] = useState(false);
 
   useEffect(() => {
@@ -28,11 +30,11 @@ export function Splash({ onDone }: { onDone: () => void }) {
           <Logo size={104} />
         </div>
         <div className="splash-word">Arah</div>
-        <div className="splash-tag">Navigate Malaysia, privately.</div>
+        <div className="splash-tag">{t("splash.tag")}</div>
       </div>
       <div className="splash-foot">
-        <div className="splash-made">Made by Yutfi</div>
-        <div>Open source · No account · No tracking</div>
+        <div className="splash-made">{t("splash.made")}</div>
+        <div>{t("splash.foot")}</div>
       </div>
     </div>
   );

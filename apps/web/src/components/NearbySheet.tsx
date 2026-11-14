@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
-import { CATEGORIES, DEFAULT_RADIUS_M, formatDistance, haversine, type LatLng, type Poi } from "@arah/core";
+import { DEFAULT_RADIUS_M, formatDistance, haversine, type LatLng, type Poi } from "@arah/core";
 import { CatIcon, CATEGORY_UI } from "../lib/categories";
+import { catLabel, subLabel, useT } from "../lib/i18n";
 
 interface Props {
   pois: Poi[];
@@ -15,6 +16,7 @@ interface Props {
 }
 
 export function NearbySheet({ pois, from, fromYou, status, error, activeCount, onPick, onRetry, onClose }: Props) {
+  const { t } = useT();
   // Pre-built data answers instantly. If this takes a while we are waiting on a slow public server.
   const [slow, setSlow] = useState(false);
   useEffect(() => {
@@ -23,32 +25,31 @@ export function NearbySheet({ pois, from, fromYou, status, error, activeCount, o
     const t = setTimeout(() => setSlow(true), 3500);
     return () => clearTimeout(t);
   }, [status]);
-  const label = (id: string) => CATEGORIES.find((c) => c.id === id)?.label ?? "";
   return (
-    <div className="sheet nearby" role="region" aria-label="Places nearby" style={{ paddingBottom: "max(12px, env(safe-area-inset-bottom))" }}>
+    <div className="sheet nearby" role="region" aria-label={t("nearby.region")} style={{ paddingBottom: "max(12px, env(safe-area-inset-bottom))" }}>
       <div className="sheet-head">
         <div>
-          <div className="sheet-title">{fromYou ? "Near you" : "Around the map centre"}</div>
+          <div className="sheet-title">{fromYou ? t("nearby.you") : t("nearby.centre")}</div>
           <div className="sheet-sub">
-            Nearest first, within {DEFAULT_RADIUS_M / 1000} km. From OpenStreetMap: no ratings or busy times.
+            {t("nearby.sub", { km: DEFAULT_RADIUS_M / 1000 })}
           </div>
         </div>
-        <button className="icon-btn" aria-label="Hide places" onClick={onClose}>✕</button>
+        <button className="icon-btn" aria-label={t("nearby.hide")} onClick={onClose}>✕</button>
       </div>
 
       {status === "loading" && (
         <div className="note">
-          Looking for places nearby…
-          {slow && " Still waiting: the free map data server is slow right now."}
+          {t("nearby.loading")}
+          {slow && t("nearby.slow")}
         </div>
       )}
       {status === "error" && (
         <div className="note error">
-          {error} <button className="link" onClick={onRetry}>Try again</button>
+          {error} <button className="link" onClick={onRetry}>{t("nearby.retry")}</button>
         </div>
       )}
       {status === "idle" && activeCount > 0 && pois.length === 0 && (
-        <div className="note">Nothing mapped within {DEFAULT_RADIUS_M / 1000} km. Move the map and tap “Search this area”.</div>
+        <div className="note">{t("nearby.none", { km: DEFAULT_RADIUS_M / 1000 })}</div>
       )}
 
       <ul className="poi-list">
@@ -60,9 +61,9 @@ export function NearbySheet({ pois, from, fromYou, status, error, activeCount, o
               </span>
               <span className="poi-text">
                 <span className="poi-name">{p.name}</span>
-                <span className="poi-sub">{p.sub} · {formatDistance(haversine(from, p))}</span>
+                <span className="poi-sub">{subLabel(p.sub)} · {formatDistance(haversine(from, p))}</span>
               </span>
-              <span className="poi-kind">{label(p.category)}</span>
+              <span className="poi-kind">{catLabel(p.category)}</span>
             </button>
           </li>
         ))}

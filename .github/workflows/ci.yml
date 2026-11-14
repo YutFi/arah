@@ -22,5 +22,5 @@ jobs:
         run: |
           pip install osmium
           bash scripts/build-osm-data.sh scripts/fixtures/sample.osm
-          node -e "const m=require('./apps/web/public/data/osm/manifest.json'); if(m.counts.places!==4||m.counts.signals!==1||m.counts.cameras!==1||m.counts.tolls!==1){console.error('unexpected counts',m.counts);process.exit(1)}"
+          node -e "const m=require('./apps/web/public/data/osm/manifest.json'); if(m.counts.places!==6||m.counts.signals!==1||m.counts.cameras!==1||m.counts.tolls!==1){console.error('unexpected counts',m.counts);process.exit(1)}"
       - run: npm run build

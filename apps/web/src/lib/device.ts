@@ -3,6 +3,7 @@
 // ---- Voice guidance --------------------------------------------------------
 
 let voiceOn = true;
+let voiceLang = "en-US";
 export const voice = {
   get enabled() {
     return voiceOn;
@@ -27,12 +28,16 @@ export const voice = {
   cancel() {
     cancel();
   },
+  /** "ms-MY" for Bahasa Melayu, "en-US" for English. */
+  set lang(v: string) {
+    voiceLang = v;
+  },
   speak(text: string) {
     if (!voiceOn || !text || !("speechSynthesis" in window)) return;
     try {
       window.speechSynthesis.cancel();
       const u = new SpeechSynthesisUtterance(text);
-      u.lang = "en-US";
+      u.lang = voiceLang;
       u.rate = 1;
       window.speechSynthesis.speak(u);
     } catch {

@@ -14,6 +14,7 @@ import {
   type Route,
   type RoadTile,
 } from "@arah/core";
+import { t } from "./i18n";
 
 /**
  * Reads the pre-built map data (see scripts/build-osm-data.sh). These are small
@@ -46,7 +47,7 @@ function tile<T>(path: string, signal: AbortSignal): Promise<T> {
   let p = tileCache.get(path) as Promise<T> | undefined;
   if (!p) {
     p = fetch(`${BASE}${path}`, { signal }).then((r) => {
-      if (!r.ok) throw new Error(`Map data file ${path} failed (${r.status})`);
+      if (!r.ok) throw new Error(t("err.dataFile", { p: path, s: r.status }));
       return r.json() as Promise<T>;
     });
     tileCache.set(path, p);

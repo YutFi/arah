@@ -1,115 +1,72 @@
 import { detectEnv } from "../lib/permission";
+import { boldParts, t, useT, type Key } from "../lib/i18n";
+
+// Turns **bold** markers into <b> without using innerHTML.
+function rich(text: string) {
+  return boldParts(text).map((p, i) => (p.bold ? <b key={i}>{p.text}</b> : p.text));
+}
 
 /** Shown before we ask: explains why, so the browser prompt makes sense. */
 export function LocationPrimer({ onAllow, onSkip }: { onAllow: () => void; onSkip: () => void }) {
+  const { t } = useT();
   return (
-    <div className="modal" role="dialog" aria-modal="true" aria-label="Turn on location">
+    <div className="modal" role="dialog" aria-modal="true" aria-label={t("loc.turnOnBtn")}>
       <div className="modal-card center" style={{ paddingBottom: "max(24px, env(safe-area-inset-bottom))" }}>
         <div className="pin-art" aria-hidden>◎</div>
-        <h2>See where you are</h2>
-        <p>
-          Arah uses your location to start routes from where you are and to guide you turn by turn.
-          It stays on your phone: no account, no saved trips.
+        <h2>{t("loc.primerTitle")}</h2>
+        <p>{t("loc.primerBody")}</p>
+        <p className="muted">
+          {rich(t("loc.primerConfirm", { allow: `**${t("loc.primerAllow")}**`, allowWhile: `**${t("loc.primerAllowWhile")}**` }))}
         </p>
-        <p className="muted">Your phone will ask you to confirm. Tap <b>Allow</b> (or <b>Allow While Using App</b>).</p>
         <div className="actions col">
-          <button className="btn primary" onClick={onAllow}>Turn on location</button>
-          <button className="btn ghost" onClick={onSkip}>Not now</button>
+          <button className="btn primary" onClick={onAllow}>{t("loc.turnOnBtn")}</button>
+          <button className="btn ghost" onClick={onSkip}>{t("loc.notNow")}</button>
         </div>
       </div>
     </div>
   );
 }
 
+const list = (prefix: string, n: number): string[] =>
+  Array.from({ length: n }, (_, i) => t(`${prefix}.${i + 1}` as Key));
+
 function steps(): { title: string; items: string[] } {
   const env = detectEnv();
 
-  if (env.os === "ios" && env.standalone) {
-    return {
-      title: "On iPhone (Arah on your Home Screen)",
-      items: [
-        "Open the iPhone **Settings** app.",
-        "Tap **Privacy & Security**, then **Location Services**. Make sure it is **On**.",
-        "Scroll down to **Safari Websites** and choose **While Using the App**.",
-        "Come back to Arah, close it fully, open it again, and tap **Try again**.",
-      ],
-    };
-  }
-  if (env.os === "ios" && env.browser === "safari") {
-    return {
-      title: "On iPhone, in Safari",
-      items: [
-        "Tap the **aA** icon at the left of the address bar.",
-        "Tap **Website Settings**, then set **Location** to **Allow**.",
-        "If Location is missing or greyed out: open the **Settings** app, tap **Privacy & Security**, **Location Services**, make sure it is **On**, then **Safari Websites**, then **While Using the App**.",
-        "Come back here and tap **Try again**.",
-      ],
-    };
-  }
+  if (env.os === "ios" && env.standalone) return { title: t("loc.ios.sa.title"), items: list("loc.ios.sa", 4) };
+  if (env.os === "ios" && env.browser === "safari") return { title: t("loc.ios.saf.title"), items: list("loc.ios.saf", 4) };
   if (env.os === "ios") {
-    const name = env.browser === "chrome" ? "Chrome" : env.browser === "firefox" ? "Firefox" : env.browser === "edge" ? "Edge" : "your browser";
-    return {
-      title: `On iPhone, in ${name}`,
-      items: [
-        "Open the iPhone **Settings** app.",
-        "Tap **Privacy & Security**, then **Location Services**. Make sure it is **On**.",
-        `Scroll to **${name === "your browser" ? "your browser" : name}** and choose **While Using the App**.`,
-        "Come back here and tap **Try again**. If it is still blocked, close this tab, open the link again, and tap **Allow** when asked.",
-        "Safari is the most reliable browser for this on iPhone.",
-      ],
-    };
+    const name = env.browser === "chrome" ? "Chrome" : env.browser === "firefox" ? "Firefox" : env.browser === "edge" ? "Edge" : t("loc.ios.other.browser");
+    const items = [1, 2, 3, 4, 5].map((i) => t(`loc.ios.other.${i}` as Key, { name }));
+    return { title: t("loc.ios.other.title", { name }), items };
   }
-  if (env.os === "android") {
-    return {
-      title: env.browser === "chrome" ? "On Android, in Chrome" : "On Android",
-      items: [
-        "Swipe down from the top of the screen and make sure **Location** is switched on.",
-        "In the browser, tap the **icon at the left of the address bar** (a lock or small sliders).",
-        "Tap **Permissions**, then **Location**, and choose **Allow**. If you see **Reset permission**, tap it and then allow location again.",
-        "Come back here and tap **Try again**.",
-      ],
-    };
-  }
-  return {
-    title: "In your browser",
-    items: [
-      "Click the **lock or sliders icon** at the left of the address bar.",
-      "Find **Location** and set it to **Allow**.",
-      "Tap **Try again**, or reload the page.",
-    ],
-  };
-}
-
-// Turns **bold** markers into <b> without using innerHTML.
-function rich(text: string) {
-  return text.split("**").map((part, i) => (i % 2 ? <b key={i}>{part}</b> : part));
+  if (env.os === "android") return { title: env.browser === "chrome" ? t("loc.and.chrome.title") : t("loc.and.title"), items: list("loc.and", 4) };
+  return { title: t("loc.other.title"), items: list("loc.other", 3) };
 }
 
 /** Shown when the browser is blocking location: exact steps for this phone. */
 export function LocationHelp({ onRetry, onClose }: { onRetry: () => void; onClose: () => void }) {
+  const { t } = useT();
   const s = steps();
   return (
-    <div className="modal" role="dialog" aria-modal="true" aria-label="How to turn on location">
+    <div className="modal" role="dialog" aria-modal="true" aria-label={t("loc.helpAria")}>
       <div className="modal-card" style={{ paddingBottom: "max(20px, env(safe-area-inset-bottom))" }}>
         <div className="sheet-head">
-          <div className="sheet-title">Turn on location</div>
-          <button className="icon-btn" aria-label="Close" onClick={onClose}>✕</button>
+          <div className="sheet-title">{t("loc.helpTitle")}</div>
+          <button className="icon-btn" aria-label={t("common.close")} onClick={onClose}>✕</button>
         </div>
-        <p>Your browser is blocking location for Arah, so it cannot show where you are.</p>
+        <p>{t("loc.helpBody")}</p>
         <h3>{s.title}</h3>
         <ol className="steps">
-          {s.items.map((t, i) => (
-            <li key={i}>{rich(t)}</li>
+          {s.items.map((x, i) => (
+            <li key={i}>{rich(x)}</li>
           ))}
         </ol>
         <div className="actions col">
-          <button className="btn primary" onClick={onRetry}>Try again</button>
-          <button className="btn ghost" onClick={() => window.location.reload()}>Reload the page</button>
+          <button className="btn primary" onClick={onRetry}>{t("loc.retry")}</button>
+          <button className="btn ghost" onClick={() => window.location.reload()}>{t("loc.reload")}</button>
         </div>
-        <p className="muted small">
-          Menu names can differ a little between phones. You can still use Arah without location: search for a
-          place and the route starts from the middle of the map.
-        </p>
+        <p className="muted small">{t("loc.helpFoot")}</p>
       </div>
     </div>
   );

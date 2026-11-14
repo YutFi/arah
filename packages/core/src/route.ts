@@ -11,6 +11,8 @@ export interface Maneuver {
   /** Valhalla manoeuvre type number (kept for icon selection). */
   type: number;
   streetNames: string[];
+  /** For roundabouts: which exit to take (1 = first). */
+  roundaboutExitCount?: number;
   /** Index into Route.points where this manoeuvre happens. */
   beginShapeIndex: number;
   /** Distance from the start of the route to the manoeuvre point (m). */
@@ -40,6 +42,7 @@ export interface ValhallaManeuver {
   verbal_post_transition_instruction?: string;
   type?: number;
   street_names?: string[];
+  roundabout_exit_count?: number;
   begin_shape_index: number;
   length?: number; // km
   time?: number; // s
@@ -83,6 +86,7 @@ export function parseValhallaTrip(trip: ValhallaTrip): Route {
       verbalPost: m.verbal_post_transition_instruction,
       type: m.type ?? 0,
       streetNames: m.street_names ?? [],
+      roundaboutExitCount: m.roundabout_exit_count,
       beginShapeIndex: idx,
       distanceFromStartM: cumDist[idx] ?? 0,
       lengthM: (m.length ?? 0) * 1000,

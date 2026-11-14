@@ -1,5 +1,6 @@
 import { parseValhallaTrip, type LatLng, type Route, type ValhallaTrip } from "@arah/core";
 import { config } from "./config";
+import { t } from "./i18n";
 
 export interface RouteRequest {
   from: LatLng;
@@ -35,7 +36,7 @@ export async function fetchRoutes(req: RouteRequest, signal?: AbortSignal): Prom
     res = await fetch(url, { signal });
   } catch (e) {
     if ((e as Error).name === "AbortError") throw e;
-    throw new Error("Could not reach the routing server. Check your connection.");
+    throw new Error(t("route.err.reach"));
   }
 
   let data: ValhallaResponse | null = null;
@@ -45,7 +46,7 @@ export async function fetchRoutes(req: RouteRequest, signal?: AbortSignal): Prom
     /* handled below */
   }
   if (!res.ok || !data?.trip) {
-    throw new Error(data?.error ? `No route: ${data.error}` : `Routing server error (${res.status})`);
+    throw new Error(data?.error ? t("route.err.noRoute", { e: data.error }) : t("route.err.server", { s: res.status }));
   }
 
   const trips = [data.trip, ...(data.alternates ?? []).map((a) => a.trip)];

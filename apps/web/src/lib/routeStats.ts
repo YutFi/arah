@@ -1,6 +1,7 @@
 import { buildRouteQuery, countRouteFeatures, MAX_STATS_ROUTE_M, type Route, type RouteFeatures } from "@arah/core";
 import { askOverpass } from "./nearby";
 import { staticRouteElements } from "./osmData";
+import { t } from "./i18n";
 
 export type StatsState =
   | { status: "idle" }
@@ -21,6 +22,6 @@ export async function fetchRouteFeatures(routes: Route[], signal: AbortSignal): 
   if (usable.length === 0) return routes.map(() => null);
   const json = await askOverpass(buildRouteQuery(usable, 150), signal, 20000);
   const remark = (json as { remark?: string }).remark;
-  if (remark && !(json as { elements?: unknown[] }).elements?.length) throw new Error("The map data server is busy.");
+  if (remark && !(json as { elements?: unknown[] }).elements?.length) throw new Error(t("err.stats"));
   return routes.map((r) => (r.lengthM <= MAX_STATS_ROUTE_M ? countRouteFeatures(r, json) : null));
 }

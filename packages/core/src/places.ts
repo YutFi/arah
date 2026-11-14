@@ -9,7 +9,7 @@ import { haversine, isInMalaysiaBBox, type LatLng } from "./geo";
  * by popularity. Results are simply the nearest named places of each kind.
  */
 
-export type CategoryId = "fuel" | "worship" | "food" | "fun" | "hot" | "see";
+export type CategoryId = "fuel" | "worship" | "food" | "fun" | "hot" | "see" | "ev" | "health" | "money" | "shop" | "parking";
 
 /** [osm key, osm value, short label shown to the person] */
 type TagRule = readonly [key: string, value: string, label: string];
@@ -94,7 +94,45 @@ export const CATEGORIES: readonly PlaceCategory[] = [
       ["leisure", "park", "Park"],
     ],
   },
+  {
+    id: "ev",
+    label: "EV charging",
+    rules: [["amenity", "charging_station", "EV charging"]],
+  },
+  {
+    id: "health",
+    label: "Health",
+    rules: [
+      ["amenity", "hospital", "Hospital"],
+      ["amenity", "clinic", "Clinic"],
+      ["amenity", "pharmacy", "Pharmacy"],
+    ],
+  },
+  {
+    id: "money",
+    label: "ATM & bank",
+    rules: [
+      ["amenity", "atm", "ATM"],
+      ["amenity", "bank", "Bank"],
+    ],
+  },
+  {
+    id: "shop",
+    label: "Shops",
+    rules: [
+      ["shop", "convenience", "Convenience store"],
+      ["shop", "supermarket", "Supermarket"],
+    ],
+  },
+  {
+    id: "parking",
+    label: "Parking",
+    rules: [["amenity", "parking", "Parking"]],
+  },
 ];
+
+/** These may be unnamed on the map (a brand or operator is enough to show them). */
+const UNNAMED_OK: readonly CategoryId[] = ["fuel", "ev", "money"];
 
 export interface Poi {
   id: string;
@@ -137,8 +175,8 @@ export function buildOverpassQuery(
     // Group the values by key so that each key becomes one filter.
     const byKey = new Map<string, string[]>();
     for (const [k, v] of cat.rules) byKey.set(k, [...(byKey.get(k) ?? []), v]);
-    // Only petrol stations may be unnamed (they often only carry a brand).
-    const named = id === "fuel" ? "" : '["name"]';
+    // Petrol, EV chargers and ATMs may be unnamed (they often only carry a brand or operator).
+    const named = UNNAMED_OK.includes(id) ? "" : '["name"]';
     const lines = [...byKey.entries()].map(([k, vs]) => `  nwr["${k}"~"${valueRegex(vs)}"]${named}${around};`);
     parts.push(`(\n${lines.join("\n")}\n)->.${id};`, `.${id} out center ${limitPerCategory};`);
   }
@@ -210,7 +248,7 @@ export function parseOverpass(json: unknown): Poi[] {
     if (!isInMalaysiaBBox({ lat, lng })) continue;
     const cls = classify(tags);
     if (!cls) continue;
-    const name = tags["name:en"] ?? tags.name ?? tags.brand ?? tags.operator;
+    const name = tags["name:en"] ?? tags.name ?? tags.brand ?? tags.operator ?? (cls.category === "ev" ? tags.network : undefined);
     if (!name) continue;
     const id = `${el.type}/${el.id}`;
     if (seen.has(id)) continue;
