@@ -94,7 +94,7 @@ export function RoutePreview(p: Props) {
         })}
       </div>
 
-      <RouteDetails stats={p.stats} index={p.selected} />
+      <RouteDetails stats={p.stats} index={p.selected} awas={p.awasCounts?.[p.selected] ?? 0} />
 
       <label className="toggle">
         <input type="checkbox" checked={p.avoidTolls} onChange={(e) => p.onToggleTolls(e.target.checked)} />
@@ -148,7 +148,7 @@ function RouteFacts({ route, stats, index, awas }: { route: Route; stats: StatsS
 }
 
 /** Legend for the map symbols, and the toll breakdown, for the chosen route. */
-function RouteDetails({ stats, index }: { stats: StatsState; index: number }) {
+function RouteDetails({ stats, index, awas }: { stats: StatsState; index: number; awas: number }) {
   const { t } = useT();
   const f = stats.status === "loaded" ? stats.list[index] : null;
   if (!f) return null;
@@ -158,6 +158,7 @@ function RouteDetails({ stats, index }: { stats: StatsState; index: number }) {
       <div className="legend" aria-label={t("route.legend")}>
         <span><i className="l-signal" />{t("route.legend.light")}</span>
         <span><i className="l-camera" />{t("route.legend.cam")}</span>
+        {awas > 0 && <span><i className="l-awas" />{t("route.legend.awas")}</span>}
         <span><i className="l-toll" />{t("route.legend.toll")}</span>
       </div>
       {f.tolls.length > 0 && (

@@ -43,7 +43,7 @@ import { LocationHelp, LocationPrimer } from "./components/LocationHelp";
 import { onLocationPermissionChange, queryLocationPermission } from "./lib/permission";
 import { useGeolocation } from "./lib/useGeolocation";
 import { fetchRerouteOptions, fetchRoutes, fetchTripTotals } from "./lib/routing";
-import { loadAwas, type AwasState } from "./lib/awasData";
+import { AWAS_LOOKAHEAD_M, AWAS_MATCH, loadAwas, type AwasState } from "./lib/awasData";
 import { voice, wakeLock } from "./lib/device";
 import { reversePlace, type Place } from "./lib/geocode";
 import { useNearby } from "./lib/useNearby";
@@ -618,11 +618,12 @@ export default function App() {
   };
 
   // ---- speed cameras on this route -------------------------------------------
+  // Matched on the preview too (to draw the pins); alerts only while navigating.
   const cameraMatches = useMemo(
-    () => (route && awas.cameras.length > 0 && phase === "navigating" ? matchCamerasToRoute(route, awas.cameras) : []),
+    () => (route && awas.cameras.length > 0 && (phase === "navigating" || phase === "preview") ? matchCamerasToRoute(route, awas.cameras, AWAS_MATCH) : []),
     [route, awas.cameras, phase],
   );
-  const alerts = nav && cameraMatches.length > 0 ? upcomingCameras(cameraMatches, nav.distanceAlongM, 1000) : [];
+  const alerts = nav && phase === "navigating" && cameraMatches.length > 0 ? upcomingCameras(cameraMatches, nav.distanceAlongM, AWAS_LOOKAHEAD_M) : [];
   const alert = alerts[0] ?? null;
 
   // ---- voice -----------------------------------------------------------------
@@ -639,7 +640,9 @@ export default function App() {
       }
       return;
     }
-    if (alert && alert.distanceAheadM <= 500 && !said.has(`cam:${alert.camera.id}`)) {
+    // Speak earlier at motorway speed (about 20 s ahead), never closer than 500 m, never farther than the banner.
+    const camSpeakM = Math.min(AWAS_LOOKAHEAD_M, Math.max(500, ((live?.speedMps ?? 0) || 0) * 20));
+    if (alert && alert.distanceAheadM <= camSpeakM && !said.has(`cam:${alert.camera.id}`)) {
       said.add(`cam:${alert.camera.id}`);
       const limit = alert.camera.speedLimitKph ? t("voice.camLimit", { n: alert.camera.speedLimitKph }) : "";
       voice.speak(t("voice.cam", { limit }));
@@ -724,12 +727,12 @@ export default function App() {
   const alongBucket = nav ? Math.floor(nav.distanceAlongM / MARK_STEP_M) * MARK_STEP_M : 0;
   const routeMarks = useMemo(() => {
     if (phase === "navigating") {
-      return navFeatures ? buildMarks(navFeatures, { fromM: alongBucket - 100, toM: alongBucket + MARK_AHEAD_M }) : null;
+      return navFeatures ? buildMarks(navFeatures, { fromM: alongBucket - 100, toM: alongBucket + MARK_AHEAD_M }, cameraMatches) : null;
     }
     if (phase !== "preview" || stats.status !== "loaded") return null;
     const f = stats.list[sel];
-    return f ? buildMarks(f) : null;
-  }, [phase, stats, sel, navFeatures, alongBucket]);
+    return f ? buildMarks(f, undefined, cameraMatches) : null;
+  }, [phase, stats, sel, navFeatures, alongBucket, cameraMatches]);
   const lightsInfo = useMemo(
     () => (phase === "navigating" && navFeatures && nav && nav.status !== "arrived" ? signalsAhead(navFeatures.signals, nav.distanceAlongM) : null),
     [phase, navFeatures, nav],
@@ -852,7 +855,7 @@ export default function App() {
           onStart={startNavigation}
           onCancel={cancelPreview}
           stats={stats}
-          awasCounts={awas.cameras.length > 0 ? routes.map((r) => matchCamerasToRoute(r, awas.cameras).length) : null}
+          awasCounts={awas.cameras.length > 0 ? routes.map((r) => matchCamerasToRoute(r, awas.cameras, AWAS_MATCH).length) : null}
           trip={
             tripRun
               ? { index: stopIdx, total: trip.length, later: trip.slice(stopIdx + 1).map((p) => p.name), totals: tripTotals, onEdit: () => setTripOpen(true) }

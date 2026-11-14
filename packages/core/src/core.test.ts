@@ -211,6 +211,10 @@ describe("AWAS data gate", () => {
   it("accepts an empty dataset (nothing verified yet)", () => {
     expect(validateDataset([])).toEqual({ valid: [], issues: [] });
   });
+  it("accepts an approximate flag only as a boolean", () => {
+    expect(validateCamera({ ...good, approximate: true })).toEqual([]);
+    expect(validateCamera({ ...good, approximate: "yes" as unknown as boolean }).length).toBeGreaterThan(0);
+  });
 });
 
 describe("AWAS route matching", () => {
@@ -230,6 +234,14 @@ describe("AWAS route matching", () => {
     expect(m.map((x) => x.camera.id)).toEqual(["a", "d"]);
     expect(m[0]?.distanceAlongM).toBeGreaterThan(550);
     expect(m[0]?.distanceAlongM).toBeLessThan(565);
+  });
+
+  it("ignores a camera on the other carriageway a few metres away when it has a direction", () => {
+    // ~12 m east of the road, but enforcing southbound traffic: not ours (we drive north).
+    const otherSide: CameraRecord = { ...base, id: "e", lat: 3.105, lng: 101.7001, directionDeg: 180 };
+    const ours: CameraRecord = { ...base, id: "f", lat: 3.105, lng: 101.7001, directionDeg: 0 };
+    expect(matchCamerasToRoute(route, [otherSide]).map((x) => x.camera.id)).toEqual([]);
+    expect(matchCamerasToRoute(route, [ours], { maxOffRouteM: 35 }).map((x) => x.camera.id)).toEqual(["f"]);
   });
 
   it("lists only cameras still ahead and within range", () => {

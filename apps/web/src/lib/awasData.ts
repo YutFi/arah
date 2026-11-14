@@ -1,5 +1,10 @@
 import { validateDataset, type CameraRecord } from "@arah/core";
 
+/** Positions are approximate, so allow a little more sideways slack than exact data would need. */
+export const AWAS_MATCH = { maxOffRouteM: 35, maxBearingDiffDeg: 60 } as const;
+/** The banner shows this far ahead (JPJ signboards warn from about 1 km). */
+export const AWAS_LOOKAHEAD_M = 1000;
+
 export interface AwasState {
   status: "loading" | "empty" | "loaded" | "error";
   cameras: CameraRecord[];

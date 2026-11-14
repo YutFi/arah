@@ -141,6 +141,7 @@ export function NavHud(p: Props) {
             <span>
               {formatDistance(Math.max(0, p.alert.distanceAheadM))}
               {p.alert.camera.speedLimitKph ? t("nav.limit", { n: p.alert.camera.speedLimitKph }) : ""}
+              {p.alert.camera.approximate ? t("nav.camApprox") : ""}
             </span>
           </div>
         )}

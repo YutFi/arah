@@ -302,6 +302,19 @@ export const MapView = forwardRef<MapHandle, Props>(function MapView(
           },
         });
       }
+      for (const a of marks.awas) {
+        want.set(`a:${a.id}`, {
+          ...a,
+          make: () => {
+            const node = document.createElement("div");
+            node.className = "mark camera awas";
+            node.setAttribute("role", "img");
+            node.setAttribute("aria-label", a.speedLimitKph ? `AwAS speed camera from the JPJ list, approximate position, limit ${a.speedLimitKph}` : "AwAS speed camera from the JPJ list, approximate position");
+            node.innerHTML = `<svg ${markSvgAttrs} width="15" height="15"><path d="M4 8h3l1.5-2h7L17 8h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg><span>AwAS</span>`;
+            return node;
+          },
+        });
+      }
       for (const t of marks.tolls) {
         want.set(`t:${t.lat},${t.lng}`, {
           ...t,

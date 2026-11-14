@@ -207,12 +207,14 @@ button.toast { text-align: left; border: 0; width: calc(100% - 24px); }
 .mark.signal svg { display: block; width: 11px; height: 18px; }
 .mark.signal.nav svg { width: 20px; height: 32px; }
 .mark.camera { background: #f59e0b; }
+.mark.camera.awas { background: #dc2626; padding: 0 8px 0 6px; }
 .mark.toll { background: #7c3aed; }
 .mark.toll.priced { padding: 0 8px 0 6px; }
 .legend { display: flex; flex-wrap: wrap; gap: 6px 12px; font-size: 12px; color: var(--muted, #64748b); margin: 8px 0 2px; }
 .legend i { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 5px; vertical-align: -1px; border: 2px solid #fff; box-shadow: 0 0 0 1px rgba(0,0,0,.2); }
 .legend .l-signal { width: 8px; height: 13px; border-radius: 3px; border-width: 1px; background: linear-gradient(#ef4444 0 33%, #fbbf24 33% 66%, #22c55e 66%); }
 .legend .l-camera { background: #f59e0b; }
+.legend .l-awas { background: #dc2626; }
 .legend .l-toll { background: #7c3aed; }
 .toll-box { margin: 8px 0 0; padding: 10px 12px; border-radius: 12px; background: rgba(124,58,237,.08); font-size: 13px; }
 .toll-box summary { cursor: pointer; }

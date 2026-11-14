@@ -21,7 +21,7 @@ A privacy-first, open-source navigation app for Malaysia that runs in the phone'
 - **Stuck in slow traffic?** `packages/core/src/jam.ts` notices from *your own movement* that you have barely moved for a few minutes on a road that normally flows, and offers "Find another road". A button on the driving screen does the same on demand. It asks the routing server for ordinary alternatives plus one route that must not use the next 1.5 km of your current road (`exclude_polygons`), and shows how much longer each would take at normal speeds. The "Live traffic" chip opens Google Maps or Waze at your position, because Arah has no traffic data of its own
 - Turn-by-turn directions with voice, current speed, rerouting when you leave the route, screen kept awake
 - **Simulate drive** mode, so you can test navigation without driving
-- AWAS speed-camera alert engine, built and tested, but fed by an **empty** dataset because no verified records exist yet (see `data/README.md`)
+- AwAS speed-camera pins and alerts for **20 of the 46 active entries** on the JPJ list. The list has no coordinates, so each position is matched to a camera mapped on OpenStreetMap and is **approximate** (see `data/README.md`)
 
 ## What does not work yet
 
@@ -29,7 +29,7 @@ A privacy-first, open-source navigation app for Malaysia that runs in the phone'
 | --- | --- |
 | Live traffic | Not available, so Arah cannot show jams on a map or know whether another road is also jammed. It only notices that *you* are stuck. See `docs/LIVE-TRAFFIC.md` for what exists and what to do next |
 | Toll prices | Partial. About a dozen flat-rate plazas (Class 1 car) are priced, each from two public rate lists that agree, with source links and a check date in the code. No official machine-readable rates dataset exists. Closed systems (PLUS, ECE...) charge per entry and exit and are not priced. More plazas can be added only with two sources each |
-| AWAS camera locations | Engine done, data empty. Route cards show cameras mapped on OpenStreetMap instead (not the official list, no spoken alerts from it) |
+| AwAS camera locations | 20 of 46 JPJ entries pinned (red pins, banner + spoken alert, approximate positions). The other 26 are not placed. Cameras mapped on OpenStreetMap are orange pins. Not checked on the road, and the JPJ list (file dated 15.07.2024) may be out of date |
 | Speed limits | Not started |
 | Background navigation | Not possible in a web app (phones stop it). Needs the native apps later |
 | CarPlay / Android Auto | Not started. Not claimed |
@@ -74,7 +74,7 @@ Nothing is invented. A speed-camera record is used only if it has a source URL a
 
 ## Testing notes
 
-- `packages/core` has 73 automated tests (geometry, route parsing, progress tracking, off-route detection, AWAS matching and data gate, toll estimate rules, nearby categories, Malay turn text, slow-traffic detection, avoid-ahead area, route overlap, traffic light counting, trip stop lists).
+- `packages/core` has 75 automated tests (geometry, route parsing, progress tracking, off-route detection, AWAS matching and data gate, toll estimate rules, nearby categories, Malay turn text, slow-traffic detection, avoid-ahead area, route overlap, traffic light counting, trip stop lists).
 - The app was also exercised in a headless browser with the network calls faked: search, route options, simulated drive to arrival, camera alert, about screen. That test used made-up roads and a made-up camera, only inside the test.
 - The Malay screens, Malay turn text and voice language (`ms-MY`), prayer sheet, saved places, share link and open-in links were exercised the same way (made-up place and route, network faked).
 - The slow-traffic prompt, reroute sheet and traffic links were exercised with a test build that shortens the wait from 150 s to 20 s (`VITE_JAM_WINDOW_S`), and a faked routing server. Whether the real public routing server accepts `exclude_polygons` was **not** confirmed (if it refuses, the sheet just shows the ordinary alternatives). The Google Maps `layer=traffic` and Waze `z=` link formats are from memory of their documentation and were not opened.

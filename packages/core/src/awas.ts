@@ -24,6 +24,11 @@ export interface CameraRecord {
   /** ISO date (YYYY-MM-DD) when a person last checked this record. Required. */
   verifiedOn: string;
   notes?: string;
+  /**
+   * True when the position was matched from a community map (OpenStreetMap) to an
+   * official list that has no coordinates, so it is close but not surveyed.
+   */
+  approximate?: boolean;
 }
 
 export interface ValidationIssue {
@@ -57,6 +62,7 @@ export function validateCamera(r: unknown): ValidationIssue[] {
   }
   if (rec.directionDeg !== undefined && !(rec.directionDeg >= 0 && rec.directionDeg < 360)) bad("directionDeg must be 0 to <360");
   if (rec.speedLimitKph !== undefined && !(rec.speedLimitKph > 0 && rec.speedLimitKph <= 130)) bad("speedLimitKph must be 1 to 130");
+  if (rec.approximate !== undefined && typeof rec.approximate !== "boolean") bad("approximate must be true or false");
   return issues;
 }
 
