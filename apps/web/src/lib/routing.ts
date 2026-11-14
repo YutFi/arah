@@ -95,3 +95,34 @@ export async function fetchRerouteOptions(
   }
   return out;
 }
+
+/**
+ * Length and time of the whole trip, from here through every stop, at normal speeds.
+ * One ask with all stops. Returns null when the server cannot do it (the trip still works,
+ * each leg is routed when you get to it).
+ */
+export async function fetchTripTotals(
+  from: LatLng,
+  stops: LatLng[],
+  avoidTolls: boolean,
+  signal?: AbortSignal,
+): Promise<{ lengthM: number; durationS: number } | null> {
+  if (stops.length < 2) return null;
+  const body = {
+    locations: [from, ...stops].map((p) => ({ lat: p.lat, lon: p.lng, type: "break" })),
+    costing: "auto",
+    costing_options: { auto: { use_tolls: avoidTolls ? 0 : 0.5 } },
+    directions_options: { units: "kilometers", language: "en-US" },
+  };
+  try {
+    const res = await fetch(`${config.routingUrl}/route?json=${encodeURIComponent(JSON.stringify(body))}`, { signal });
+    if (!res.ok) return null;
+    const data = (await res.json()) as { trip?: { summary?: { length?: number; time?: number } } };
+    const s = data.trip?.summary;
+    if (!s || typeof s.length !== "number" || typeof s.time !== "number") return null;
+    return { lengthM: s.length * 1000, durationS: s.time };
+  } catch (e) {
+    if ((e as Error).name === "AbortError") throw e;
+    return null;
+  }
+}

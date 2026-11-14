@@ -20,6 +20,15 @@ interface Props {
   stats: StatsState;
   /** Verified AWAS records on each route; null while no verified list is loaded. */
   awasCounts: number[] | null;
+  /** Set when this is one stop of a multi-stop trip. */
+  trip: {
+    index: number;
+    total: number;
+    later: string[];
+    /** Whole trip from here: undefined while asking, null when the server could not tell. */
+    totals: { lengthM: number; durationS: number } | null | undefined;
+    onEdit: () => void;
+  } | null;
 }
 
 export function RoutePreview(p: Props) {
@@ -31,11 +40,25 @@ export function RoutePreview(p: Props) {
     <div className="sheet" style={{ paddingBottom: "max(16px, env(safe-area-inset-bottom))", maxHeight: "52dvh" }}>
       <div className="sheet-head">
         <div>
+          {p.trip && <div className="trip-step">{t("trip.stopOf", { i: p.trip.index + 1, n: p.trip.total })}</div>}
           <div className="sheet-title">{p.dest.name}</div>
           {p.dest.detail && <div className="sheet-sub">{p.dest.detail}</div>}
         </div>
         <button className="icon-btn" aria-label={t("route.cancel")} onClick={p.onCancel}>✕</button>
       </div>
+
+      {p.trip && (
+        <div className="trip-info">
+          {p.trip.later.length > 0 && <div>{t("trip.then", { names: p.trip.later.join(" → ") })}</div>}
+          {p.trip.totals && (
+            <div>
+              <b>{t("trip.total", { n: p.trip.total - p.trip.index, d: formatDistance(p.trip.totals.lengthM), t: fmtDuration(p.trip.totals.durationS) })}</b>
+              <small>{t("trip.totalNote")}</small>
+            </div>
+          )}
+          <button className="link" onClick={p.trip.onEdit}>{t("trip.edit")}</button>
+        </div>
+      )}
 
       {!p.startsFromGps && (
         <div className="note">

@@ -23,6 +23,9 @@ interface Props {
   onStop: () => void;
   /** Mapped traffic lights still ahead on this route; null when not known. */
   lights: { nextM: number | null; left: number } | null;
+  /** Multi-stop trip: which stop this is. Null on an ordinary trip. */
+  tripPill: { i: number; n: number; name: string } | null;
+  onTrip: () => void;
 }
 
 /** Valhalla manoeuvre type -> a simple arrow. */
@@ -113,6 +116,11 @@ export function NavHud(p: Props) {
           )}
         </div>
 
+        {p.tripPill && (
+          <button className="status stop-pill" onClick={p.onTrip}>
+            <span aria-hidden>⚑</span> {t("trip.pill", { i: p.tripPill.i, n: p.tripPill.n, name: p.tripPill.name })}
+          </button>
+        )}
         {p.lights && !arrived && (
           <div className="status lights" role="status" aria-label={t("nav.light.aria")}>
             <TrafficLightIcon />

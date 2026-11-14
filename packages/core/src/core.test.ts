@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
+  addStop,
   angleDiff,
+  MAX_TRIP_STOPS,
+  moveStop,
+  nearestFirst,
+  removeStop,
+  straightLineTotalM,
   countRouteFeatures,
   signalsAhead,
   bearing,
@@ -413,5 +419,54 @@ describe("traffic light counting", () => {
     expect(signalsAhead(sig, 330)).toEqual({ nextM: 570, left: 2 });
     expect(signalsAhead(sig, 305).left).toBe(3); // a few metres past it: GPS error, still shown as 'now'
     expect(signalsAhead(sig, 1600)).toEqual({ nextM: null, left: 0 });
+  });
+});
+
+
+// ---- multi-stop trips ------------------------------------------------------
+describe("trip helpers", () => {
+  const stop = (id: string, lat: number, lng: number) => ({ id, name: id, lat, lng });
+  const me: LatLng = { lat: 3.1, lng: 101.7 };
+  const A = stop("A", 3.2, 101.7); // ~11 km north
+  const B = stop("B", 3.11, 101.7); // ~1 km north
+  const C = stop("C", 3.15, 101.7); // ~5.5 km north
+
+  it("adds stops in order and refuses duplicates and a full trip", () => {
+    let r = addStop([], A);
+    expect(r.ok).toBe(true);
+    r = addStop(r.list, stop("A", 3.5, 101.9)); // same id
+    expect(r).toMatchObject({ ok: false, reason: "duplicate" });
+    r = addStop(r.list, stop("A2", 3.20001, 101.70001)); // another id, same spot (a few metres away)
+    expect(r).toMatchObject({ ok: false, reason: "duplicate" });
+    let list = r.list;
+    for (let i = 0; i < MAX_TRIP_STOPS; i++) {
+      const next = addStop(list, stop("x" + i, 4 + i * 0.1, 102));
+      list = next.list;
+    }
+    expect(list.length).toBe(MAX_TRIP_STOPS);
+    expect(addStop(list, stop("one-more", 6, 103))).toMatchObject({ ok: false, reason: "full" });
+  });
+
+  it("moves and removes stops without touching the original list", () => {
+    const list = [A, B, C];
+    expect(moveStop(list, 0, 1).map((s) => s.id)).toEqual(["B", "A", "C"]);
+    expect(moveStop(list, 2, -1).map((s) => s.id)).toEqual(["A", "C", "B"]);
+    expect(moveStop(list, 0, -1).map((s) => s.id)).toEqual(["A", "B", "C"]); // already first
+    expect(moveStop(list, 2, 1).map((s) => s.id)).toEqual(["A", "B", "C"]); // already last
+    expect(removeStop(list, 1).map((s) => s.id)).toEqual(["A", "C"]);
+    expect(list.map((s) => s.id)).toEqual(["A", "B", "C"]);
+  });
+
+  it("sorts nearest first from where you are, and can keep the first stops fixed", () => {
+    expect(nearestFirst(me, [A, C, B]).map((s) => s.id)).toEqual(["B", "C", "A"]);
+    // heading to A already: keep it first, then nearest from A
+    expect(nearestFirst(me, [A, B, C], 1).map((s) => s.id)).toEqual(["A", "C", "B"]);
+    expect(nearestFirst(me, []).length).toBe(0);
+  });
+
+  it("adds up straight-line hops", () => {
+    const total = straightLineTotalM(me, [B, A]);
+    expect(total).toBeGreaterThan(10_900);
+    expect(total).toBeLessThan(11_300);
   });
 });

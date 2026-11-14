@@ -334,3 +334,35 @@ button:active:not(:disabled), a.chip-btn:active, a.btn:active { transform: scale
 .status.lights { display: flex; align-items: center; gap: 8px; padding: 5px 12px 5px 8px; font-size: 14px; }
 .status.lights svg { flex: none; filter: drop-shadow(0 1px 1px rgba(0,0,0,.35)); }
 .status.lights small { font-size: 13px; color: #475569; }
+
+/* ---- multi-stop trips ---- */
+.trip-bar { display: flex; align-items: center; gap: 10px; margin: 0 12px 10px; padding: 8px 8px 8px 12px; background: var(--panel); border-radius: 16px; box-shadow: 0 2px 12px rgba(0,0,0,.3); }
+.trip-bar-main { flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px; background: none; border: 0; padding: 4px 0; font: inherit; font-weight: 650; color: var(--ink); text-align: left; }
+.trip-bar-main u { margin-left: auto; color: var(--blue-dark); font-weight: 600; font-size: 14px; }
+.btn.trip-go { flex: none; padding: 10px 16px; font-size: 16px; }
+.trip-badge { flex: none; width: 26px; height: 26px; border-radius: 50%; display: inline-grid; place-items: center; background: #7c3aed; color: #fff; font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.trip-list { list-style: none; margin: 10px 0 4px; padding: 0; }
+.trip-row { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid #e6ebf3; }
+.trip-row.done { opacity: .55; }
+.trip-row.done .trip-badge { background: #1b6b36; }
+.trip-row.now .trip-badge { background: var(--blue); }
+.trip-name { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.trip-name b { overflow-wrap: anywhere; }
+.trip-name small { color: var(--muted); font-size: 13px; }
+.trip-name .tag { align-self: flex-start; }
+.trip-ctl { flex: none; display: flex; align-items: center; gap: 4px; }
+.trip-ctl .icon-btn:disabled { opacity: .3; }
+.trip-step { font-size: 12.5px; font-weight: 700; color: #7c3aed; text-transform: uppercase; letter-spacing: .04em; }
+.trip-info { margin-top: 8px; padding: 10px 12px; background: #f4efff; border-radius: 10px; font-size: 14px; display: flex; flex-direction: column; gap: 4px; }
+.trip-info small { display: block; color: var(--muted); font-size: 12.5px; }
+.trip-info .link { align-self: flex-start; }
+.btn.trip-add { flex: none; padding-left: 14px; padding-right: 14px; font-size: 15px; }
+.btn.trip-add.on { background: #efe6ff; color: #5b21b6; }
+.status.stop-pill { display: flex; align-items: center; gap: 8px; font-weight: 650; color: #5b21b6; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.stop-pin { width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; background: #7c3aed; color: #fff; font-weight: 700; font-size: 14px; border: 2.5px solid #fff; box-shadow: 0 2px 6px rgba(0,0,0,.4); pointer-events: none; }
+.stop-pin.done { background: #1b6b36; }
+.modal.prompt { align-items: center; justify-content: center; background: rgba(8,12,24,.7); z-index: 20; padding: 16px; }
+.modal.prompt .modal-card { border-radius: 22px; max-width: 420px; }
+.prompt-flag { width: 56px; height: 56px; margin: 0 auto 4px; border-radius: 50%; display: grid; place-items: center; background: #1b6b36; color: #fff; font-size: 28px; }
+.modal.prompt p { font-size: 16px; }
+.modal.prompt small { color: var(--muted); }

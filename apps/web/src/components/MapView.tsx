@@ -39,6 +39,8 @@ interface Props {
   onMoveEnd: (center: LatLng) => void;
   /** Traffic lights, cameras and toll plazas on the chosen route (route preview only). */
   marks: RouteMarks | null;
+  /** Numbered pins for the stops of a multi-stop trip. */
+  stops: { lat: number; lng: number; n: number; done: boolean }[];
 }
 
 maplibregl.setWorkerUrl(workerUrl);
@@ -66,7 +68,7 @@ const angleDiff = (from: number, to: number) => ((((to - from) % 360) + 540) % 3
 const toLine = (r: Route) => r.points.map((p) => [p.lng, p.lat] as [number, number]);
 
 export const MapView = forwardRef<MapHandle, Props>(function MapView(
-  { routes, selected, dest, user, navigating, follow, onUserMove, pois, selectedPoiId, onPoiClick, onLongPress, onMoveEnd, marks },
+  { routes, selected, dest, user, navigating, follow, onUserMove, pois, selectedPoiId, onPoiClick, onLongPress, onMoveEnd, marks, stops },
   ref,
 ) {
   const el = useRef<HTMLDivElement>(null);
@@ -326,6 +328,22 @@ export const MapView = forwardRef<MapHandle, Props>(function MapView(
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [marks, navigating]);
+
+  // ---- numbered pins for the stops of a trip -------------------------------
+  const stopMarkers = useRef<maplibregl.Marker[]>([]);
+  useEffect(() => {
+    const m = map.current;
+    if (!m) return;
+    for (const mk of stopMarkers.current) mk.remove();
+    stopMarkers.current = stops.map((s) => {
+      const node = document.createElement("div");
+      node.className = `stop-pin${s.done ? " done" : ""}`;
+      node.setAttribute("role", "img");
+      node.setAttribute("aria-label", `Stop ${s.n}`);
+      node.textContent = s.done ? "✓" : String(s.n);
+      return new maplibregl.Marker({ element: node }).setLngLat([s.lng, s.lat]).addTo(m);
+    });
+  }, [stops]);
 
   // ---- destination pin ------------------------------------------------------
   useEffect(() => {

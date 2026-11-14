@@ -1,12 +1,18 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
+  addStop,
   avoidAheadPolygon,
   createJamDetector,
   createNavigator,
+  hasStop,
   haversine,
   matchCamerasToRoute,
+  moveStop,
+  nearestFirst,
   nearestPerCategory,
   pointAtDistance,
+  removeStop,
+  sameSpot,
   signalsAhead,
   typicalSpeedKph,
   upcomingCameras,
@@ -18,6 +24,7 @@ import {
   type Poi,
   type Route,
   DEFAULT_RADIUS_M,
+  MAX_TRIP_STOPS,
 } from "@arah/core";
 import { MapView, type MapHandle } from "./components/MapView";
 import { buildMarks } from "./lib/routeMarks";
@@ -30,11 +37,12 @@ import { NearbySheet } from "./components/NearbySheet";
 import { PrayerSheet } from "./components/PrayerSheet";
 import { RerouteSheet, type RerouteState } from "./components/RerouteSheet";
 import { TrafficSheet } from "./components/TrafficSheet";
+import { NextStopPrompt, TripBar, TripSheet } from "./components/TripSheet";
 import { Splash } from "./components/Splash";
 import { LocationHelp, LocationPrimer } from "./components/LocationHelp";
 import { onLocationPermissionChange, queryLocationPermission } from "./lib/permission";
 import { useGeolocation } from "./lib/useGeolocation";
-import { fetchRerouteOptions, fetchRoutes } from "./lib/routing";
+import { fetchRerouteOptions, fetchRoutes, fetchTripTotals } from "./lib/routing";
 import { loadAwas, type AwasState } from "./lib/awasData";
 import { voice, wakeLock } from "./lib/device";
 import { reversePlace, type Place } from "./lib/geocode";
@@ -45,6 +53,7 @@ import { maneuverText, useT } from "./lib/i18n";
 import { hhmm, nextPrayer } from "./lib/prayer";
 import { readShared } from "./lib/share";
 import { savePlace, type SavedPlace } from "./lib/saved";
+import { loadTrip, saveTrip } from "./lib/tripStore";
 
 type Phase = "browse" | "preview" | "navigating";
 const SIM_SPEEDS = [50, 120, 300, 5]; // 5 km/h is a crawl, to try the slow-traffic prompt
@@ -109,6 +118,13 @@ export default function App() {
   /** Lights, cameras and toll plazas on the route being driven (looked up again after a reroute). */
   const [navFeatures, setNavFeatures] = useState<RouteFeatures | null>(null);
   const [viewCenter, setViewCenter] = useState<LatLng | null>(null);
+  // ---- multi-stop trip: stops in order, which one we are heading to, and the arrival popup ----
+  const [trip, setTrip] = useState<Place[]>(() => loadTrip());
+  const [tripRun, setTripRun] = useState(false);
+  const [stopIdx, setStopIdx] = useState(0);
+  const [tripOpen, setTripOpen] = useState(false);
+  const [tripTotals, setTripTotals] = useState<{ lengthM: number; durationS: number } | null | undefined>(undefined);
+  const [arrivalPrompt, setArrivalPrompt] = useState<"ask" | "busy" | "error" | null>(null);
 
   const announced = useRef(new Set<string>());
   const rerouteBusy = useRef(false);
@@ -223,6 +239,31 @@ export default function App() {
     return () => ac.abort();
   }, [phase, routes]);
 
+  useEffect(() => saveTrip(trip), [trip]);
+
+  // Whole-trip length and time, shown while previewing a multi-stop trip.
+  useEffect(() => {
+    if (!tripRun || phase !== "preview" || !origin || trip.length - stopIdx < 2) {
+      setTripTotals(undefined);
+      return;
+    }
+    const ac = new AbortController();
+    setTripTotals(undefined);
+    fetchTripTotals(origin.pos, trip.slice(stopIdx), avoidTolls, ac.signal)
+      .then((r) => !ac.signal.aborted && setTripTotals(r))
+      .catch(() => {
+        /* no total shown; the trip itself is not affected */
+      });
+    return () => ac.abort();
+  }, [tripRun, phase, origin, trip, stopIdx, avoidTolls]);
+
+  // Reached a stop that is not the last: ask, and keep asking until answered.
+  useEffect(() => {
+    if (phase !== "navigating" || !tripRun || nav?.status !== "arrived") return;
+    if (stopIdx >= trip.length - 1) return; // the last stop is an ordinary arrival
+    setArrivalPrompt((cur) => cur ?? "ask");
+  }, [phase, tripRun, nav?.status, stopIdx, trip.length]);
+
   // While driving: the same lookup for the route in use, so lights can be drawn and counted ahead.
   useEffect(() => {
     if (phase !== "navigating" || !route) {
@@ -276,8 +317,8 @@ export default function App() {
     mapRef.current?.clearPadding();
   }, []);
 
-  /** "Directions" on the place card: ask for routes to it. */
-  const startRoute = useCallback(
+  /** Open the route preview for a place. */
+  const beginPreview = useCallback(
     (p: Place) => {
       geo.start(false); // user just tapped: a good moment for the permission prompt
       setSelPlace(null);
@@ -293,6 +334,96 @@ export default function App() {
     },
     [geo],
   );
+
+  /** "Directions" on the place card: a one-off route to just that place. */
+  const startRoute = useCallback(
+    (p: Place) => {
+      setTripRun(false);
+      beginPreview(p);
+    },
+    [beginPreview],
+  );
+
+  // ---- multi-stop trip ----------------------------------------------------------
+  const tripToggle = (p: Place) => {
+    if (hasStop(trip, p)) {
+      setTrip(trip.filter((s) => s.id !== p.id && !sameSpot(s, p)));
+      return;
+    }
+    const r = addStop(trip, p);
+    if (!r.ok) {
+      flash(r.reason === "full" ? t("trip.full", { n: MAX_TRIP_STOPS }) : t("trip.dup"));
+      return;
+    }
+    setTrip(r.list);
+    flash(t("trip.added", { n: r.list.length }));
+    closePlace();
+  };
+
+  const startTrip = () => {
+    const first = trip[0];
+    if (!first) return;
+    setTripOpen(false);
+    setTripRun(true);
+    setStopIdx(0);
+    beginPreview(first);
+  };
+
+  /** Route from where you are to stop `idx`, then drive to it. Used by the arrival popup and by "go to this stop now". */
+  const goToStop = (idx: number) => {
+    const target = trip[idx];
+    if (!target) return;
+    const from: LatLng = live ? { lat: live.lat, lng: live.lng } : (dest ?? target);
+    setArrivalPrompt((cur) => (cur ? "busy" : cur));
+    fetchRoutes({ from, to: target, avoidTolls, alternates: 0 })
+      .then((rs) => {
+        const next = rs[0];
+        if (!next) throw new Error("no route");
+        announced.current.clear();
+        setStopIdx(idx);
+        setDest(target);
+        setRoutes([next]);
+        setSel(0);
+        setNav(null);
+        setJam(null);
+        setArrivalPrompt(null);
+        setTripOpen(false);
+      })
+      .catch(() => {
+        setArrivalPrompt((cur) => (cur ? "error" : cur));
+        flash(t("trip.err"));
+      });
+  };
+
+  const nearestForTrip = () => {
+    const from: LatLng = live ?? mapRef.current?.getCenter() ?? { lat: 3.139, lng: 101.6869 };
+    setTrip(nearestFirst(from, trip, phase === "navigating" && tripRun ? stopIdx + 1 : 0));
+  };
+
+  const clearTrip = () => {
+    if (phase === "navigating" && tripRun) {
+      stopNavigation();
+      return;
+    }
+    setTrip([]);
+    setTripOpen(false);
+    if (phase === "preview") cancelPreview();
+  };
+
+  /** Closing the list while previewing: make sure the preview is still for the first stop. */
+  const closeTripSheet = () => {
+    setTripOpen(false);
+    if (phase !== "preview" || !tripRun) return;
+    const first = trip[0];
+    if (!first) cancelPreview();
+    else if (first.id !== dest?.id) beginPreview(first);
+  };
+
+  const addMoreStops = () => {
+    setTripOpen(false);
+    if (phase === "preview") cancelPreview();
+    flash(t("trip.hint"));
+  };
 
   // A pin the person dropped, or typed as coordinates: ask what is there.
   const pinId = selPlace?.kind === "pin" && selPlace.unnamed ? selPlace.id : null;
@@ -340,6 +471,7 @@ export default function App() {
   );
 
   const cancelPreview = useCallback(() => {
+    setTripRun(false); // the stops stay in the trip bar; only the route preview closes
     setPhase("browse");
     setDest(null);
     setRoutes([]);
@@ -364,6 +496,11 @@ export default function App() {
   };
 
   const stopNavigation = () => {
+    setTrip([]);
+    setTripRun(false);
+    setStopIdx(0);
+    setArrivalPrompt(null);
+    setTripOpen(false);
     setPhase("browse");
     setDest(null);
     setRoutes([]);
@@ -496,7 +633,9 @@ export default function App() {
     if (nav.status === "arrived") {
       if (!said.has("arrived")) {
         said.add("arrived");
-        voice.speak(t("voice.arrived"));
+        const here = trip[stopIdx];
+        const next = trip[stopIdx + 1];
+        voice.speak(tripRun && here && next ? t("trip.voice", { a: here.name, b: next.name }) : t("voice.arrived"));
       }
       return;
     }
@@ -520,7 +659,7 @@ export default function App() {
       said.add(`${idx}:far`);
       voice.speak(t("voice.in", { n: Math.max(100, Math.round(d / 100) * 100), text: `${text.charAt(0).toLowerCase()}${text.slice(1)}` }));
     }
-  }, [nav, route, phase, alert, live?.speedMps, lang, t]);
+  }, [nav, route, phase, alert, live?.speedMps, lang, t, trip, tripRun, stopIdx]);
 
   const onLocate = () => {
     if (geo.status === "denied") {
@@ -597,6 +736,18 @@ export default function App() {
   );
   const placeDistance = selPlace && nearbyFrom !== null && geo.fix ? haversine(geo.fix, selPlace) : null;
 
+  const mapStops = useMemo(
+    () =>
+      trip
+        .map((p, i) => ({ lat: p.lat, lng: p.lng, n: i + 1, done: tripRun && phase === "navigating" && i < stopIdx }))
+        // the stop being driven to already has the red destination pin
+        .filter((s) => !(dest && phase !== "browse" && sameSpot(s, dest))),
+    [trip, tripRun, phase, stopIdx, dest],
+  );
+  const arrivedStop = tripRun ? trip[stopIdx] : undefined;
+  const nextStop = tripRun ? trip[stopIdx + 1] : undefined;
+  const nextAwayM = arrivedStop && nextStop ? haversine(arrivedStop, nextStop) : null;
+
   return (
     <div className="app">
       <MapView
@@ -613,6 +764,7 @@ export default function App() {
         onPoiClick={(p) => showPlace(poiToPlace(p))}
         onLongPress={dropPin}
         marks={routeMarks}
+        stops={mapStops}
         onMoveEnd={(c) => {
           if (phaseRef.current === "browse") setViewCenter(c);
         }}
@@ -647,6 +799,7 @@ export default function App() {
             </button>
           )}
           {toastMsg && <div className="toast" role="status">{toastMsg}</div>}
+          {trip.length > 0 && <TripBar count={trip.length} onEdit={() => setTripOpen(true)} onStart={startTrip} />}
           {selPlace ? (
             <PlaceCard
               place={selPlace}
@@ -654,6 +807,8 @@ export default function App() {
               naming={naming}
               onDirections={() => startRoute(selPlace)}
               onClose={closePlace}
+              inTrip={hasStop(trip, selPlace)}
+              onToggleTrip={() => tripToggle(selPlace)}
             />
           ) : nearby.active.length > 0 && listFrom ? (
             <NearbySheet
@@ -698,6 +853,11 @@ export default function App() {
           onCancel={cancelPreview}
           stats={stats}
           awasCounts={awas.cameras.length > 0 ? routes.map((r) => matchCamerasToRoute(r, awas.cameras).length) : null}
+          trip={
+            tripRun
+              ? { index: stopIdx, total: trip.length, later: trip.slice(stopIdx + 1).map((p) => p.name), totals: tripTotals, onEdit: () => setTripOpen(true) }
+              : null
+          }
         />
       )}
 
@@ -722,6 +882,8 @@ export default function App() {
           onRecenter={() => setFollow(true)}
           onStop={stopNavigation}
           lights={lightsInfo}
+          tripPill={tripRun && trip[stopIdx] ? { i: stopIdx + 1, n: trip.length, name: trip[stopIdx]!.name } : null}
+          onTrip={() => setTripOpen(true)}
         />
       )}
 
@@ -733,6 +895,30 @@ export default function App() {
           at={live ? { lat: live.lat, lng: live.lng } : prayerPos}
           onUse={chooseReroute}
           onClose={closeReroute}
+        />
+      )}
+      {tripOpen && (
+        <TripSheet
+          stops={trip}
+          current={phase === "navigating" && tripRun ? stopIdx : null}
+          onMove={(i, d) => setTrip((l) => moveStop(l, i, d))}
+          onRemove={(i) => setTrip((l) => removeStop(l, i))}
+          onNearest={nearestForTrip}
+          onClear={clearTrip}
+          onAddMore={addMoreStops}
+          onGoTo={goToStop}
+          onClose={closeTripSheet}
+        />
+      )}
+      {arrivalPrompt && phase === "navigating" && arrivedStop && nextStop && (
+        <NextStopPrompt
+          arrivedAt={arrivedStop}
+          next={nextStop}
+          awayM={nextAwayM}
+          busy={arrivalPrompt === "busy"}
+          error={arrivalPrompt === "error"}
+          onGo={() => goToStop(stopIdx + 1)}
+          onFinish={stopNavigation}
         />
       )}
       {trafficOpen && <TrafficSheet at={prayerPos} onClose={() => setTrafficOpen(false)} />}

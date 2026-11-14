@@ -13,11 +13,14 @@ interface Props {
   naming: boolean;
   onDirections: () => void;
   onClose: () => void;
+  /** Already one of the stops of the trip being built. */
+  inTrip: boolean;
+  onToggleTrip: () => void;
 }
 
 type Panel = null | "save" | "open";
 
-export function PlaceCard({ place, distanceM, naming, onDirections, onClose }: Props) {
+export function PlaceCard({ place, distanceM, naming, onDirections, onClose, inTrip, onToggleTrip }: Props) {
   const { t } = useT();
   const saved = useSaved();
   const [copied, setCopied] = useState(false);
@@ -117,6 +120,9 @@ export function PlaceCard({ place, distanceM, naming, onDirections, onClose }: P
 
       <div className="actions">
         <button className="btn primary" onClick={onDirections}>{t("place.directions")}</button>
+        <button className={`btn ghost trip-add${inTrip ? " on" : ""}`} aria-pressed={inTrip} onClick={onToggleTrip}>
+          {inTrip ? t("trip.in") : t("trip.add")}
+        </button>
         {place.phone && <a className="btn ghost call" href={`tel:${place.phone.replace(/[^+\d]/g, "")}`}>{t("place.call")}</a>}
       </div>
     </div>
