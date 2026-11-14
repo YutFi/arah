@@ -2,6 +2,10 @@
 
 Researched 14 Nov 2026. Everything below comes from public pages found that day; items marked **unverified** were not confirmed in full.
 
+## What Arah does about jams today (no traffic data)
+
+While you drive, Arah compares how far you have moved along the route with how fast that road normally flows (the routing server's own time estimate). If you have barely moved for about 2.5 minutes on a road that normally flows at 30 km/h or more, it asks "Stuck in slow traffic?" and can look for another road, including one that avoids the next 1.5 km of the road you are on. A long red light does not trigger it (the last 25 seconds must also be slow). This uses only your own phone's movement, so it never claims a jam it cannot see, and it cannot tell whether the other road is also jammed. A "Live traffic" chip opens Google Maps or Waze at your position for the real picture.
+
 ## Short answer
 
 There is **no ready-made, free, open-source live traffic data feed for Malaysia**. What exists in open source are *routing engines that can accept* traffic speeds, plus a few partial data sources. The data itself has to come from somewhere, and for now there is no such source we can legally and freely use. Until one exists, Arah says "Live traffic: not available" and uses typical road speeds. It never shows invented congestion.

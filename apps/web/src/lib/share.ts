@@ -33,6 +33,11 @@ export const wazeUrl = (s: Spot) => `https://waze.com/ul?ll=${r5(s.lat)},${r5(s.
 export const googleMapsUrl = (s: Spot) => `https://www.google.com/maps/dir/?api=1&destination=${r5(s.lat)},${r5(s.lng)}`;
 export const appleMapsUrl = (s: Spot) => `https://maps.apple.com/?daddr=${r5(s.lat)},${r5(s.lng)}`;
 
+/** Opens a live traffic view centred here. Arah itself has no traffic data. */
+export const googleTrafficUrl = (s: { lat: number; lng: number }) =>
+  `https://www.google.com/maps/@?api=1&map_action=map&center=${r5(s.lat)},${r5(s.lng)}&zoom=14&layer=traffic`;
+export const wazeTrafficUrl = (s: { lat: number; lng: number }) => `https://waze.com/ul?ll=${r5(s.lat)},${r5(s.lng)}&z=14`;
+
 export const isApple = () => /iPhone|iPad|iPod|Macintosh/.test(navigator.userAgent) && "ontouchend" in document;
 
 /** Uses the phone's share sheet if there is one, otherwise copies the link. Returns what happened. */

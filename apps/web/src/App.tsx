@@ -1,10 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
+  avoidAheadPolygon,
+  createJamDetector,
   createNavigator,
   haversine,
   matchCamerasToRoute,
   nearestPerCategory,
   pointAtDistance,
+  typicalSpeedKph,
   upcomingCameras,
   type CategoryId,
   type Fix,
@@ -23,11 +26,13 @@ import { AboutSheet } from "./components/AboutSheet";
 import { PlaceCard } from "./components/PlaceCard";
 import { NearbySheet } from "./components/NearbySheet";
 import { PrayerSheet } from "./components/PrayerSheet";
+import { RerouteSheet, type RerouteState } from "./components/RerouteSheet";
+import { TrafficSheet } from "./components/TrafficSheet";
 import { Splash } from "./components/Splash";
 import { LocationHelp, LocationPrimer } from "./components/LocationHelp";
 import { onLocationPermissionChange, queryLocationPermission } from "./lib/permission";
 import { useGeolocation } from "./lib/useGeolocation";
-import { fetchRoutes } from "./lib/routing";
+import { fetchRerouteOptions, fetchRoutes } from "./lib/routing";
 import { loadAwas, type AwasState } from "./lib/awasData";
 import { voice, wakeLock } from "./lib/device";
 import { reversePlace, type Place } from "./lib/geocode";
@@ -40,7 +45,10 @@ import { readShared } from "./lib/share";
 import { savePlace, type SavedPlace } from "./lib/saved";
 
 type Phase = "browse" | "preview" | "navigating";
-const SIM_SPEEDS = [50, 120, 300];
+const SIM_SPEEDS = [50, 120, 300, 5]; // 5 km/h is a crawl, to try the slow-traffic prompt
+const AVOID_AHEAD_M = 1500;
+// Only the test build sets this (a shorter wait before the slow-traffic prompt).
+const JAM_WINDOW_S = Number(import.meta.env.VITE_JAM_WINDOW_S) || undefined;
 const ARRIVAL_TYPES = new Set([4, 5, 6]);
 const MAX_PER_CATEGORY = 35;
 
@@ -81,6 +89,10 @@ export default function App() {
   const [voiceOn, setVoiceOn] = useState(true);
   const [about, setAbout] = useState(false);
   const [prayerOpen, setPrayerOpen] = useState(false);
+  const [trafficOpen, setTrafficOpen] = useState(false);
+  const [jam, setJam] = useState<{ movedM: number; spanS: number } | null>(null);
+  const [reroute, setReroute] = useState<RerouteState | null>(null);
+  const rerouteAc = useRef<AbortController | null>(null);
   const [toastMsg, setToastMsg] = useState<string | null>(null);
   const [minute, setMinute] = useState(() => Math.floor(Date.now() / 60000));
   const [splashDone, setSplashDone] = useState(false);
@@ -336,6 +348,9 @@ export default function App() {
     setNav(null);
     setSimulate(false);
     setSimFix(null);
+    rerouteAc.current?.abort();
+    setReroute(null);
+    setJam(null);
     voice.cancel();
     void wakeLock.off();
     geo.start(false);
@@ -387,6 +402,60 @@ export default function App() {
         setRerouting(false);
       });
   }, [nav, simulate, dest, live, avoidTolls, t]);
+
+  // ---- stuck in slow traffic? Judged only from your own progress along the route ----
+  const detector = useMemo(() => createJamDetector({ windowS: JAM_WINDOW_S }), [route]);
+  useEffect(() => {
+    if (phase !== "navigating" || !nav || !route || nav.status !== "on-route") return;
+    const st = detector.push({
+      t: performance.now(),
+      alongM: nav.distanceAlongM,
+      typicalKph: typicalSpeedKph(route, nav.distanceAlongM),
+      remainingM: nav.remainingM,
+    });
+    setJam((j) => (st.stuck ? (j ?? { movedM: st.movedM, spanS: st.spanS }) : null));
+  }, [nav, route, phase, detector]);
+
+  const openReroute = useCallback(() => {
+    if (!route || !dest || !live || !nav) return;
+    rerouteAc.current?.abort();
+    const ac = new AbortController();
+    rerouteAc.current = ac;
+    setReroute({ status: "loading" });
+    fetchRerouteOptions(
+      { from: live, to: dest, avoidTolls, avoidArea: avoidAheadPolygon(route, nav.distanceAlongM, 150, AVOID_AHEAD_M), current: route },
+      ac.signal,
+    )
+      .then((options) => !ac.signal.aborted && setReroute({ status: "ready", options }))
+      .catch((e: Error) => {
+        if (e.name !== "AbortError") setReroute({ status: "error", message: e.message });
+      });
+  }, [route, dest, live, nav, avoidTolls]);
+
+  const closeReroute = useCallback(() => {
+    rerouteAc.current?.abort();
+    setReroute(null);
+  }, []);
+
+  const chooseReroute = (r: Route) => {
+    rerouteAc.current?.abort();
+    announced.current.clear();
+    setRoutes([r]);
+    setSel(0);
+    setReroute(null);
+    setJam(null);
+    voice.speak(t("voice.updated"));
+  };
+
+  const jamFind = () => {
+    detector.snooze(performance.now());
+    setJam(null);
+    openReroute();
+  };
+  const jamStay = () => {
+    detector.snooze(performance.now());
+    setJam(null);
+  };
 
   // ---- speed cameras on this route -------------------------------------------
   const cameraMatches = useMemo(
@@ -528,6 +597,7 @@ export default function App() {
           prayerLabel={prayerLabel}
           onPickSaved={pickSaved}
           onParkHere={parkHere}
+          onTraffic={() => setTrafficOpen(true)}
         />
       )}
 
@@ -609,6 +679,10 @@ export default function App() {
           onSimSpeed={() => setSimSpeed((i) => (i + 1) % SIM_SPEEDS.length)}
           alert={alert}
           rerouting={rerouting}
+          jam={reroute ? null : jam}
+          onJamFind={jamFind}
+          onJamStay={jamStay}
+          onReroute={openReroute}
           gpsWeak={(geo.fix?.accuracyM ?? 0) > 50}
           voiceOn={voiceOn}
           onVoice={toggleVoice}
@@ -618,6 +692,17 @@ export default function App() {
         />
       )}
 
+      {reroute && nav && (
+        <RerouteSheet
+          state={reroute}
+          currentLeftS={nav.remainingS}
+          avoidKm={AVOID_AHEAD_M / 1000}
+          at={live ? { lat: live.lat, lng: live.lng } : prayerPos}
+          onUse={chooseReroute}
+          onClose={closeReroute}
+        />
+      )}
+      {trafficOpen && <TrafficSheet at={prayerPos} onClose={() => setTrafficOpen(false)} />}
       {about && <AboutSheet awas={awas} onClose={() => setAbout(false)} />}
       {prayerOpen && <PrayerSheet lat={prayerPos.lat} lng={prayerPos.lng} fromYou={!!geo.fix} onClose={() => setPrayerOpen(false)} />}
 

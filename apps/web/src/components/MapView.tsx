@@ -4,7 +4,7 @@ import "maplibre-gl/dist/maplibre-gl.css";
 // MapLibre 6 runs map parsing in a separate worker file. Bundlers do not copy it
 // next to the app code on their own, so we give MapLibre its address explicitly.
 import workerUrl from "maplibre-gl/dist/maplibre-gl-worker.mjs?url";
-import type { LatLng, Poi, Route } from "@arah/core";
+import { haversine, type LatLng, type Poi, type Route } from "@arah/core";
 import { config } from "../lib/config";
 import { CATEGORY_UI, iconSvg } from "../lib/categories";
 import type { RouteMarks } from "../lib/routeMarks";
@@ -57,6 +57,8 @@ function clearCameraPadding(m: maplibregl.Map) {
   m.setPadding({ top: 0, bottom: 0, left: 0, right: 0 });
 }
 
+const angleDiff = (from: number, to: number) => ((((to - from) % 360) + 540) % 360) - 180;
+
 const toLine = (r: Route) => r.points.map((p) => [p.lng, p.lat] as [number, number]);
 
 export const MapView = forwardRef<MapHandle, Props>(function MapView(
@@ -73,6 +75,17 @@ export const MapView = forwardRef<MapHandle, Props>(function MapView(
   latest.current = { routes, selected, user, navigating, follow };
   const onMove = useRef(onUserMove);
   onMove.current = onUserMove;
+  const motion = useRef({
+    shown: { lat: 0, lng: 0, heading: 0 },
+    from: { lat: 0, lng: 0, heading: 0 },
+    to: { lat: 0, lng: 0, heading: 0 },
+    t0: 0,
+    dur: 1000,
+    lastFixAt: 0,
+    last: 0,
+    camBearing: 0,
+    raf: 0,
+  });
   const poiMarkers = useRef(new Map<string, maplibregl.Marker>());
   const markMarkers = useRef<maplibregl.Marker[]>([]);
   const lastRoutes = useRef<Route[] | null>(null);
@@ -198,7 +211,10 @@ export const MapView = forwardRef<MapHandle, Props>(function MapView(
 
     return () => {
       cancelPress();
+      if (motion.current.raf) cancelAnimationFrame(motion.current.raf);
+      motion.current.raf = 0;
       userMarker.current?.remove();
+      userMarker.current = null;
       destMarker.current?.remove();
       for (const mk of poiMarkers.current.values()) mk.remove();
       poiMarkers.current.clear();
@@ -320,37 +336,89 @@ export const MapView = forwardRef<MapHandle, Props>(function MapView(
     for (const [id, mk] of poiMarkers.current) mk.getElement().classList.toggle("selected", id === selectedPoiId);
   }, [selectedPoiId, pois]);
 
-  // ---- your position --------------------------------------------------------
+  // ---- your position: glide between GPS fixes ---------------------------------
+  // A GPS fix arrives about once a second. Setting the arrow to each fix makes it jump,
+  // and easing the camera separately makes the arrow wobble on screen. Instead, one
+  // animation loop moves the arrow, its heading and the camera together every frame.
+  const uLat = user?.lat;
+  const uLng = user?.lng;
+  const uHead = user?.heading;
   useEffect(() => {
     const m = map.current;
-    if (!m || !user) return;
+    if (!m || uLat == null || uLng == null) return;
+    const mo = motion.current;
+    const now = performance.now();
+    const head = uHead != null && !Number.isNaN(uHead) ? uHead : mo.to.heading;
+
     if (!userMarker.current) {
       const node = document.createElement("div");
       node.className = "user-marker";
       node.innerHTML = '<div class="user-pulse"></div><svg viewBox="0 0 40 40" width="40" height="40"><path d="M20 4 L31 33 L20 26 L9 33 Z" fill="#2f7bff" stroke="#fff" stroke-width="3" stroke-linejoin="round"/></svg>';
-      userMarker.current = new maplibregl.Marker({ element: node, rotationAlignment: "map", pitchAlignment: "map" })
-        .setLngLat([user.lng, user.lat])
-        .addTo(m);
+      userMarker.current = new maplibregl.Marker({ element: node, rotationAlignment: "map", pitchAlignment: "map" }).setLngLat([uLng, uLat]).addTo(m);
+      mo.shown = { lat: uLat, lng: uLng, heading: head };
+      mo.from = { ...mo.shown };
+      mo.to = { ...mo.shown };
+      mo.camBearing = head;
+      userMarker.current.setRotation(head);
+    } else {
+      // Far from where the arrow is (new route snap, GPS jump): move at once. Otherwise glide.
+      const far = haversine(mo.shown, { lat: uLat, lng: uLng }) > 400;
+      mo.from = far ? { lat: uLat, lng: uLng, heading: head } : { ...mo.shown };
+      mo.dur = Math.min(1400, Math.max(350, now - mo.lastFixAt));
+      mo.t0 = now;
+      mo.to = { lat: uLat, lng: uLng, heading: head };
+      if (far) mo.shown = { ...mo.to };
     }
-    userMarker.current.setLngLat([user.lng, user.lat]);
-    if (user.heading != null && !Number.isNaN(user.heading)) userMarker.current.setRotation(user.heading);
+    mo.lastFixAt = now;
 
-    if (navigating && follow) {
-      m.easeTo({
-        center: [user.lng, user.lat],
-        zoom: 17,
-        pitch: 55,
-        bearing: user.heading != null && !Number.isNaN(user.heading) ? user.heading : m.getBearing(),
-        padding: { top: 240, bottom: 0, left: 0, right: 0 },
-        duration: 900,
-        easing: (t) => t,
-      });
-    } else if (!centered.current && routes.length === 0 && !navigating) {
+    if (!navigating && !centered.current && routes.length === 0) {
       centered.current = true;
-      m.jumpTo({ center: [user.lng, user.lat], zoom: 15 });
+      m.jumpTo({ center: [uLng, uLat], zoom: 15 });
     }
+    startLoop();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user, navigating, follow]);
+  }, [uLat, uLng, uHead, navigating, follow]);
+
+  function startLoop() {
+    const mo = motion.current;
+    if (mo.raf) return;
+    mo.last = performance.now();
+    mo.raf = requestAnimationFrame(frame);
+  }
+
+  function frame(ts: number) {
+    const mo = motion.current;
+    const m = map.current;
+    const marker = userMarker.current;
+    mo.raf = 0;
+    if (!m || !marker) return;
+    const dt = Math.min(0.1, Math.max(0.001, (ts - mo.last) / 1000));
+    mo.last = ts;
+
+    const p = Math.min(1, Math.max(0, (ts - mo.t0) / mo.dur));
+    mo.shown.lat = mo.from.lat + (mo.to.lat - mo.from.lat) * p;
+    mo.shown.lng = mo.from.lng + (mo.to.lng - mo.from.lng) * p;
+    mo.shown.heading = mo.from.heading + angleDiff(mo.from.heading, mo.to.heading) * p;
+    marker.setLngLat([mo.shown.lng, mo.shown.lat]);
+    marker.setRotation(mo.shown.heading);
+
+    let busy = p < 1;
+    const { navigating: nav, follow: fol } = latest.current;
+    if (nav && fol) {
+      // Camera follows the arrow itself, and eases its zoom, tilt and bearing (no stop-start).
+      const k = 1 - Math.exp(-dt / 0.45);
+      mo.camBearing += angleDiff(mo.camBearing, mo.shown.heading) * k;
+      const z = m.getZoom();
+      const pt = m.getPitch();
+      const pad = m.getPadding().top ?? 0;
+      const nz = z + (17 - z) * k;
+      const np = pt + (55 - pt) * k;
+      const npad = pad + (240 - pad) * k;
+      m.jumpTo({ center: [mo.shown.lng, mo.shown.lat], bearing: mo.camBearing, zoom: nz, pitch: np, padding: { top: npad, bottom: 0, left: 0, right: 0 } });
+      if (Math.abs(17 - nz) > 0.01 || Math.abs(55 - np) > 0.2 || Math.abs(240 - npad) > 0.5 || Math.abs(angleDiff(mo.camBearing, mo.shown.heading)) > 0.2) busy = true;
+    }
+    if (busy) mo.raf = requestAnimationFrame(frame);
+  }
 
   // ---- leaving navigation: flatten the view ---------------------------------
   useEffect(() => {

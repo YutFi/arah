@@ -44,19 +44,9 @@ export function PrayerSheet({ lat, lng, fromYou, onClose }: Props) {
           </div>
         )}
 
-        <div className="qibla">
-          <svg className="qibla-dial" viewBox="0 0 80 80" role="img" aria-label={tt("prayer.qibla", { deg: Math.round(bearing), dir: tt(`dir.${dir}` as Key) })}>
-            <circle cx="40" cy="40" r="36" fill="none" stroke="#c9d3e3" strokeWidth="2" />
-            <text x="40" y="12" textAnchor="middle" fontSize="9" fill="#5b6575">N</text>
-            <g transform={`rotate(${bearing} 40 40)`}>
-              <path d="M40 14 L46 42 H34 Z" fill="#0d9488" />
-              <circle cx="40" cy="44" r="3" fill="#0f172a" />
-            </g>
-          </svg>
-          <div>
-            <b>{tt("prayer.qibla", { deg: Math.round(bearing), dir: tt(`dir.${dir}` as Key) })}</b>
-            <div className="foot-note">{tt("prayer.qiblaHelp")}</div>
-          </div>
+        <div className="qibla-note">
+          <b>{tt("prayer.qiblaTitle")}</b>
+          <p>{tt("prayer.qiblaSteps", { deg: Math.round(bearing), dir: tt(`dir.${dir}` as Key) })}</p>
         </div>
 
         <div className="foot-note">{tt("prayer.note")}</div>

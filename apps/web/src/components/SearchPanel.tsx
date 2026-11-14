@@ -16,6 +16,7 @@ interface Props {
   prayerLabel: string | null;
   onPickSaved: (s: SavedPlace) => void;
   onParkHere: () => void;
+  onTraffic: () => void;
 }
 
 function pinFor(c: LatLng, name: string): Place {
@@ -30,7 +31,7 @@ function pinFor(c: LatLng, name: string): Place {
   };
 }
 
-export function SearchPanel({ near, onPick, onAbout, active, onToggleCategory, onPrayer, prayerLabel, onPickSaved, onParkHere }: Props) {
+export function SearchPanel({ near, onPick, onAbout, active, onToggleCategory, onPrayer, prayerLabel, onPickSaved, onParkHere, onTraffic }: Props) {
   const { t, lang } = useT();
   const saved = useSaved();
   const [q, setQ] = useState("");
@@ -211,7 +212,7 @@ export function SearchPanel({ near, onPick, onAbout, active, onToggleCategory, o
             🕌 {prayerLabel}
           </button>
         )}
-        <span className="chip warn">{t("search.noTraffic")}</span>
+        <button className="chip warn chip-btn-like" onClick={onTraffic}>{t("traffic.chip")} ⓘ</button>
       </div>
     </div>
   );

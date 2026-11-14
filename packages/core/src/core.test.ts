@@ -266,3 +266,104 @@ describe("pointAtDistance (simulation)", () => {
     expect(end.point.lng).toBeCloseTo(101.71, 6);
   });
 });
+
+// ---- jam detection ----------------------------------------------------------
+import { avoidAheadPolygon, createJamDetector, typicalSpeedKph } from "./jam";
+import { haversine as hv } from "./geo";
+
+describe("jam detector", () => {
+  const feed = (det: ReturnType<typeof createJamDetector>, fn: (sec: number) => number, secs: number, typical = 60, remaining = 5000) => {
+    let last = det.push({ t: 0, alongM: fn(0), typicalKph: typical, remainingM: remaining });
+    for (let s = 1; s <= secs; s++) last = det.push({ t: s * 1000, alongM: fn(s), typicalKph: typical, remainingM: remaining });
+    return last;
+  };
+
+  it("flags a long crawl on a road that normally flows", () => {
+    const r = feed(createJamDetector(), (s) => s * 1, 160); // 3.6 km/h for 160 s
+    expect(r.stuck).toBe(true);
+    expect(r.avgKph).toBeCloseTo(3.6, 1);
+  });
+
+  it("does not flag normal driving", () => {
+    expect(feed(createJamDetector(), (s) => s * 14, 160).stuck).toBe(false);
+  });
+
+  it("ignores a red light: a stop followed by moving again", () => {
+    const along = (s: number) => (s < 130 ? 0 : (s - 130) * 12);
+    expect(feed(createJamDetector(), along, 160).stuck).toBe(false);
+  });
+
+  it("does not ask before the slow spell has lasted long enough", () => {
+    expect(feed(createJamDetector(), () => 0, 60).stuck).toBe(false);
+  });
+
+  it("ignores roads that are normally slow, and the last stretch before the destination", () => {
+    expect(feed(createJamDetector(), (s) => s, 160, 20).stuck).toBe(false);
+    expect(feed(createJamDetector(), (s) => s, 160, 60, 400).stuck).toBe(false);
+  });
+
+  it("stays quiet after 'stay on route', then may ask again", () => {
+    const det = createJamDetector({ cooldownS: 300 });
+    expect(feed(det, (s) => s, 160).stuck).toBe(true);
+    det.snooze(160_000);
+    let last = det.push({ t: 161_000, alongM: 161, typicalKph: 60, remainingM: 5000 });
+    expect(last.stuck).toBe(false);
+    for (let s = 162; s <= 520; s++) last = det.push({ t: s * 1000, alongM: s, typicalKph: 60, remainingM: 5000 });
+    expect(last.stuck).toBe(true);
+  });
+});
+
+describe("typical speed and avoid-ahead area", () => {
+  const route = parseValhallaTrip({
+    summary: { length: 4, time: 240 },
+    legs: [
+      {
+        shape: encodePolyline([
+          { lat: 3.1, lng: 101.6 },
+          { lat: 3.118, lng: 101.6 },
+          { lat: 3.136, lng: 101.6 },
+        ]),
+        maneuvers: [
+          { instruction: "Drive north.", type: 1, begin_shape_index: 0, length: 2, time: 120 },
+          { instruction: "Arrive.", type: 4, begin_shape_index: 2, length: 0, time: 0 },
+        ],
+      },
+    ],
+  });
+
+  it("uses the road's own length and time", () => {
+    expect(typicalSpeedKph(route, 500)).toBeCloseTo(60, 0);
+  });
+
+  it("builds a thin closed area along the road ahead, not on top of you", () => {
+    const poly = avoidAheadPolygon(route, 200, 150, 1500, 30);
+    expect(poly.length).toBeGreaterThan(8);
+    expect(poly[0]).toEqual(poly[poly.length - 1]);
+    // nowhere near the start point 200 m along the road
+    const you = { lat: 3.1 + 200 / 111195, lng: 101.6 };
+    expect(Math.min(...poly.map((p) => hv(p, you)))).toBeGreaterThan(100);
+    // and about 60 m wide
+    const widths = poly.slice(0, 3).map((p) => Math.abs(p.lng - 101.6) * 111195 * Math.cos((3.1 * Math.PI) / 180));
+    expect(Math.max(...widths)).toBeLessThan(40);
+  });
+
+  it("returns nothing when there is no road left ahead", () => {
+    expect(avoidAheadPolygon(route, route.lengthM - 50)).toEqual([]);
+  });
+});
+
+describe("route overlap", () => {
+  const mk = (pts: { lat: number; lng: number }[]) =>
+    parseValhallaTrip({
+      summary: { length: 3, time: 200 },
+      legs: [{ shape: encodePolyline(pts), maneuvers: [{ instruction: "Go.", type: 1, begin_shape_index: 0, length: 3, time: 200 }, { instruction: "Arrive.", type: 4, begin_shape_index: pts.length - 1, length: 0, time: 0 }] }],
+    });
+  const a = mk([{ lat: 3.1, lng: 101.6 }, { lat: 3.125, lng: 101.6 }]);
+  it("is high for the same road and low for a parallel road 600 m away", async () => {
+    const { routeOverlap } = await import("./jam");
+    const same = mk([{ lat: 3.1, lng: 101.60001 }, { lat: 3.125, lng: 101.60001 }]);
+    const other = mk([{ lat: 3.1, lng: 101.6055 }, { lat: 3.125, lng: 101.6055 }]);
+    expect(routeOverlap(same, a)).toBeGreaterThan(0.9);
+    expect(routeOverlap(other, a)).toBeLessThan(0.2);
+  });
+});

@@ -10,6 +10,11 @@ interface Props {
   onSimSpeed: () => void;
   alert: CameraAlert | null;
   rerouting: boolean;
+  /** Slow-traffic prompt: how far you moved in how long, or null when not stuck. */
+  jam: { movedM: number; spanS: number } | null;
+  onJamFind: () => void;
+  onJamStay: () => void;
+  onReroute: () => void;
   gpsWeak: boolean;
   voiceOn: boolean;
   onVoice: () => void;
@@ -103,6 +108,16 @@ export function NavHud(p: Props) {
             </span>
           </div>
         )}
+        {p.jam && (
+          <div className="alert jam" role="alertdialog" aria-label={t("jam.title")}>
+            <strong>{t("jam.title")}</strong>
+            <span className="jam-body">{t("jam.body", { m: formatDistance(Math.round(p.jam.movedM / 10) * 10), min: Math.max(1, Math.round(p.jam.spanS / 60)) })}</span>
+            <div className="jam-actions">
+              <button className="btn primary" onClick={p.onJamFind}>{t("jam.find")}</button>
+              <button className="btn ghost" onClick={p.onJamStay}>{t("jam.stay")}</button>
+            </div>
+          </div>
+        )}
         {p.rerouting && <div className="status">{t("nav.rerouting")}</div>}
         {p.gpsWeak && !p.simulating && <div className="status warn">{t("nav.gpsWeak")}</div>}
         {p.simulating && (
@@ -116,6 +131,7 @@ export function NavHud(p: Props) {
         <button className={`round${p.voiceOn ? "" : " off"}`} aria-label={p.voiceOn ? t("nav.mute") : t("nav.unmute")} onClick={p.onVoice}>
           {p.voiceOn ? "🔊" : "🔇"}
         </button>
+        <button className="round" aria-label={t("reroute.btn")} onClick={p.onReroute}>⇄</button>
         {p.showRecenter && (
           <button className="round" aria-label={t("nav.recenter")} onClick={p.onRecenter}>◎</button>
         )}

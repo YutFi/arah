@@ -236,7 +236,94 @@ button.toast { text-align: left; border: 0; width: calc(100% - 24px); }
 .prayer-list li { display: flex; justify-content: space-between; padding: 10px 4px; border-bottom: 1px solid var(--line); font-size: 17px; font-variant-numeric: tabular-nums; }
 .prayer-list li.next { font-weight: 700; color: var(--blue-dark); }
 .prayer-list li.minor { color: var(--muted); font-size: 15px; }
-.qibla { display: flex; align-items: center; gap: 14px; margin-top: 14px; }
-.qibla-dial { width: 76px; height: 76px; flex: none; }
+.qibla-note { margin-top: 16px; padding: 12px 14px; background: #f0f7f6; border-radius: 12px; font-size: 15px; line-height: 1.45; }
+.qibla-note p { margin: 6px 0 0; color: var(--muted); }
 .lang-row { display: flex; gap: 8px; margin: 8px 0 4px; }
 .lang-row .chip-btn.on { background: var(--blue); color: #fff; border-color: var(--blue); }
+
+/* =====================================================================
+   Polish layer: motion, touch feedback, clearer hierarchy, jam prompt
+   ===================================================================== */
+:root {
+  --ease: cubic-bezier(.2, .8, .2, 1);
+  --shadow-1: 0 2px 10px rgba(10, 20, 40, .22);
+  --shadow-2: 0 6px 24px rgba(10, 20, 40, .28);
+  --ok: #138a45;
+}
+button, a.chip-btn, a.btn { touch-action: manipulation; transition: transform .12s var(--ease), background-color .15s, box-shadow .15s, opacity .15s; }
+button:active:not(:disabled), a.chip-btn:active, a.btn:active { transform: scale(.97); }
+:focus-visible { outline: 3px solid #7aa7ff; outline-offset: 2px; border-radius: 10px; }
+.btn { min-height: 50px; letter-spacing: .005em; }
+.btn.full { width: 100%; margin-top: 10px; }
+.btn.primary { box-shadow: 0 3px 10px rgba(47, 123, 255, .35); }
+.btn.primary:active:not(:disabled) { background: #2468e0; }
+.round { box-shadow: var(--shadow-1); }
+.round:active { background: #eef2f9; }
+
+/* sheets slide up, scrims fade in */
+@keyframes sheetUp { from { transform: translateY(24px); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes dropIn { from { transform: translateY(-10px); opacity: 0; } to { transform: none; opacity: 1; } }
+.sheet, .modal-card { animation: sheetUp .26s var(--ease) both; overscroll-behavior: contain; box-shadow: 0 -6px 28px rgba(10, 20, 40, .28); }
+.modal { animation: fade .2s ease both; }
+.sheet::before, .modal-card::before { content: ""; display: block; width: 38px; height: 4px; border-radius: 4px; background: #d3d9e4; margin: -6px auto 10px; }
+.sheet, .modal-card { border-radius: 24px 24px 0 0; }
+
+/* search */
+.search-box { border-radius: 18px; box-shadow: var(--shadow-2); border: 1px solid rgba(255,255,255,.6); transition: box-shadow .2s; }
+.search-box:focus-within { box-shadow: 0 6px 26px rgba(47, 123, 255, .35); }
+.results { animation: dropIn .18s var(--ease) both; border-radius: 18px; }
+.result { min-height: 52px; justify-content: center; }
+.lang-btn:active { background: #dbe5f7; }
+
+/* chips: bigger targets, clear on/off */
+.cat { min-height: 40px; transition: transform .12s var(--ease), background-color .18s, color .18s, box-shadow .18s; }
+.cat.on { box-shadow: 0 3px 12px color-mix(in srgb, var(--cat) 55%, transparent); }
+.chip-btn-like { min-height: 32px; }
+.chip.warn.chip-btn-like { color: var(--warn); border: 0; font-weight: 600; }
+.cats { scroll-snap-type: x proximity; }
+.cat { scroll-snap-align: start; }
+
+/* route cards: time first, clear selected state */
+.route-card { border-radius: 16px; transition: border-color .15s, background-color .15s, box-shadow .15s; position: relative; overflow: hidden; }
+.route-card.selected { box-shadow: 0 3px 14px rgba(47, 123, 255, .22); }
+.route-card.selected::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 5px; background: var(--blue); }
+.route-time { font-size: 24px; letter-spacing: -.01em; }
+.reroute-opt { cursor: default; }
+.stay { color: var(--ink); }
+
+/* navigation HUD */
+.banner { background: linear-gradient(180deg, #111a30 0%, #0b1220 100%); border-radius: 20px; padding: 14px 16px; box-shadow: 0 6px 22px rgba(0, 0, 0, .45); animation: dropIn .25s var(--ease) both; }
+.banner-icon { background: rgba(255,255,255,.1); border-radius: 16px; width: 62px; height: 62px; display: grid; place-items: center; font-size: 38px; flex: none; }
+.banner-dist { font-size: 32px; letter-spacing: -.01em; }
+.banner-instr { font-size: 18px; font-weight: 500; }
+.alert { animation: dropIn .22s var(--ease) both; }
+.alert.jam { background: #fff3cd; color: #4a3500; flex-direction: column; align-items: stretch; border: 2px solid #f2c200; }
+.alert.jam strong { font-size: 18px; }
+.alert.jam .jam-body { font-size: 15px; }
+.jam-actions { display: flex; gap: 8px; margin-top: 8px; }
+.jam-actions .btn { flex: 1; padding: 11px 10px; font-size: 16px; min-height: 46px; }
+.jam-actions .btn.ghost { background: rgba(0,0,0,.07); }
+.hud-side .round { width: 52px; height: 52px; font-size: 24px; }
+.speed { box-shadow: 0 4px 16px rgba(0,0,0,.45); }
+.bar { border-radius: 20px; padding: 12px 12px 12px 18px; box-shadow: 0 -4px 22px rgba(0,0,0,.28); }
+.bar-stats b { font-size: 21px; letter-spacing: -.01em; font-variant-numeric: tabular-nums; }
+.btn.stop { min-height: 48px; border-radius: 14px; }
+
+/* arrow on the map: it glides, so no CSS transitions here; just keep it on its own layer */
+.user-marker { will-change: transform; }
+
+/* toast + loading skeleton */
+.toast { animation: dropIn .22s var(--ease) both; box-shadow: var(--shadow-2); }
+.skeleton { height: 82px; border-radius: 16px; margin-top: 10px; background: linear-gradient(100deg, #eef2f9 30%, #f8faff 50%, #eef2f9 70%); background-size: 200% 100%; animation: shimmer 1.2s linear infinite; }
+@keyframes shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+
+/* places list rows */
+.poi { min-height: 56px; }
+.poi-marker { transition: transform .15s var(--ease); }
+.poi-marker:active { transform: scale(.92); }
+
+@media (prefers-reduced-motion: reduce) {
+  .sheet, .modal-card, .modal, .banner, .alert, .results, .toast, .skeleton { animation: none !important; }
+  button, a.chip-btn, a.btn { transition: none !important; }
+}
