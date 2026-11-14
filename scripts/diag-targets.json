@@ -1,0 +1,286 @@
+{
+ "1": {
+  "id": 12383713955,
+  "lat": 2.15829,
+  "lng": 102.65904,
+  "tags": {
+   "direction": "305",
+   "enforcement": "maxspeed",
+   "highway": "speed_camera",
+   "maxspeed": "110",
+   "name": "AWAS Pagoh - Northbound",
+   "_id": 12383713955
+  }
+ },
+ "2": {
+  "id": 12389362167,
+  "lat": 2.1498,
+  "lng": 102.69803,
+  "tags": {
+   "direction": "115",
+   "enforcement": "maxspeed",
+   "highway": "speed_camera",
+   "maxspeed": "110",
+   "name": "KM 146.8 Lebuhraya PLUS \u2013 Pagoh (SB)",
+   "_id": 12389362167
+  }
+ },
+ "3": {
+  "id": 10738516098,
+  "lat": 1.52748,
+  "lng": 103.75383,
+  "tags": {
+   "direction": "305",
+   "enforcement": "maxspeed",
+   "highway": "speed_camera",
+   "maxspeed": "110",
+   "name": "KM 1 Lebuhraya PLUS - Johor Bahru (NB)",
+   "_id": 10738516098
+  }
+ },
+ "4": {
+  "id": 12109692963,
+  "lat": 1.52754,
+  "lng": 103.754,
+  "tags": {
+   "direction": "115",
+   "enforcement": "maxspeed",
+   "highway": "speed_camera",
+   "maxspeed": "110",
+   "name": "KM 1 Lebuhraya PLUS - Johor Bahru (SB)",
+   "_id": 12109692963
+  }
+ },
+ "5": {
+  "id": 6120175280,
+  "lat": 2.43302,
+  "lng": 102.20533,
+  "tags": {
+   "direction": "320",
+   "enforcement": "maxspeed",
+   "highway": "speed_camera",
+   "maxspeed": "110",
+   "name": "KM 214.4 Lebuhraya PLUS, Alor Gajah (SB)",
+   "_id": 6120175280
+  }
+ },
+ "6": {
+  "id": 6120175279,
+  "lat": 2.43332,
+  "lng": 102.20491,
+  "tags": {
+   "direction": "140",
+   "enforcement": "maxspeed",
+   "highway": "speed_camera",
+   "maxspeed": "110",
+   "name": "KM 214.4 Lebuhraya PLUS, Alor Gajah (NB)",
+   "_id": 6120175279
+  }
+ },
+ "7": {
+  "id": 36363022,
+  "lat": 2.2841,
+  "lng": 102.40884,
+  "tags": {
+   "direction": "90",
+   "enforcement": "maxspeed",
+   "highway": "speed_camera",
+   "maxspeed": "110",
+   "name": "KM 184.2 Lebuhraya PLUS, Jasin (NB)",
+   "_id": 36363022
+  }
+ },
+ "8": {
+  "id": 6110021790,
+  "lat": 2.28449,
+  "lng": 102.40265,
+  "tags": {
+   "direction": "270",
+   "enforcement": "maxspeed",
+   "highway": "speed_camera",
+   "maxspeed": "110",
+   "name": "KM 185 Lebuhraya PLUS, Jasin (SB)",
+   "_id": 6110021790
+  }
+ },
+ "11": {
+  "id": 33504292,
+  "lat": 2.86802,
+  "lng": 101.63862,
+  "tags": {
+   "direction": "330",
+   "enforcement": "maxspeed",
+   "highway": "speed_camera",
+   "maxspeed": "110",
+   "name": "AWAS ELITE - Northbound",
+   "type": "enforcement",
+   "_id": 33504292
+  }
+ },
+ "12": {
+  "id": 12252412840,
+  "lat": 2.95567,
+  "lng": 101.58506,
+  "tags": {
+   "direction": "140",
+   "enforcement": "maxspeed",
+   "highway": "speed_camera",
+   "maxspeed": "110",
+   "name": "AWAS ELITE Highway - Southbound",
+   "type": "enforcement",
+   "_id": 12252412840
+  }
+ },
+ "13": {
+  "id": 13110085647,
+  "lat": 3.39783,
+  "lng": 101.5488,
+  "tags": {
+   "direction": "325",
+   "highway": "speed_camera",
+   "maxspeed": "110",
+   "name": "AES Bukit Beruntung - Southbound",
+   "_id": 13110085647
+  }
+ },
+ "16": {
+  "id": 10694135234,
+  "lat": 5.11354,
+  "lng": 100.54604,
+  "tags": {
+   "direction": "-90",
+   "highway": "speed_camera",
+   "maxspeed": "110",
+   "name": "AES Bandar Baharu - Northbound",
+   "_id": 10694135234
+  }
+ },
+ "18": {
+  "id": 12383760728,
+  "lat": 3.83606,
+  "lng": 101.42172,
+  "tags": {
+   "direction": "325",
+   "enforcement": "maxspeed",
+   "highway": "speed_camera",
+   "maxspeed": "110",
+   "name": "AES Slim River - Northbound",
+   "ref": "E0001",
+   "_id": 12383760728
+  }
+ },
+ "19": {
+  "id": 9626165816,
+  "lat": 4.90533,
+  "lng": 100.66815,
+  "tags": {
+   "direction": "12",
+   "enforcement": "maxspeed",
+   "highway": "speed_camera",
+   "maxspeed": "110",
+   "name": "AES Taiping - Northbound",
+   "ref": "E1",
+   "_id": 9626165816
+  }
+ },
+ "30": {
+  "id": 7558328324,
+  "lat": 4.95872,
+  "lng": 102.07486,
+  "tags": {
+   "direction": "80",
+   "enforcement": "maxspeed",
+   "highway": "speed_camera",
+   "maxspeed": "90",
+   "name": "AES Gua Musang",
+   "_id": 7558328324
+  }
+ },
+ "32": {
+  "id": 3555274675,
+  "lat": 5.81823,
+  "lng": 100.48899,
+  "tags": {
+   "direction": "270",
+   "enforcement": "red_light_camera",
+   "highway": "speed_camera",
+   "name": "KM 1, Jalan Gurun \u2013 Sik / Kuala Muda (arah Gurun)",
+   "_id": 3555274675
+  }
+ },
+ "33": {
+  "id": 5339362996,
+  "lat": 5.81835,
+  "lng": 100.4882,
+  "tags": {
+   "direction": "90",
+   "enforcement": "maxspeed",
+   "highway": "speed_camera",
+   "maxspeed": "90",
+   "name": "KM 1, Jalan Gurun \u2013 Sik / Kuala Muda (arah Sik)",
+   "_id": 5339362996
+  }
+ },
+ "35": {
+  "id": 4924613763,
+  "lat": 4.58254,
+  "lng": 101.08221,
+  "tags": {
+   "direction": "160",
+   "enforcement": "traffic_signals",
+   "highway": "speed_camera",
+   "maxspeed": "60",
+   "name": "AES Jalan Pasir Putih",
+   "ref": "A0184",
+   "source": "Road Transport Department of Malaysia (JPJ)",
+   "_id": 4924613763
+  }
+ },
+ "36": {
+  "id": 2539785532,
+  "lat": 4.81654,
+  "lng": 101.07839,
+  "tags": {
+   "direction": "110",
+   "enforcement": "traffic_signals",
+   "highway": "speed_camera",
+   "maxspeed": "60",
+   "name": "AES KM 26 Jalan Ipoh-Kuala Kangsar",
+   "ref": "F0001",
+   "source": "Road Transport Department of Malaysia (JPJ)",
+   "_id": 2539785532
+  }
+ },
+ "45": {
+  "id": 4924613744,
+  "lat": 3.08604,
+  "lng": 101.67354,
+  "tags": {
+   "direction": "30",
+   "enforcement": "traffic_signals",
+   "highway": "speed_camera",
+   "maxspeed": "90",
+   "name": "AES Jalan Klang Lama",
+   "name:ms": "AES Jalan Klang Lama",
+   "ref": "Z0089",
+   "source": "Road Transport Department of Malaysia (JPJ)",
+   "_id": 4924613744
+  }
+ },
+ "46": {
+  "id": 2539785544,
+  "lat": 3.17724,
+  "lng": 101.68701,
+  "tags": {
+   "direction": "130",
+   "enforcement": "traffic_signals",
+   "highway": "speed_camera",
+   "name": "AES Jalan Ipoh",
+   "name:en": "AES Ipoh Road",
+   "name:ms": "AES Jalan Ipoh",
+   "ref": "Z0060",
+   "source": "Road Transport Department of Malaysia (JPJ)",
+   "_id": 2539785544
+  }
+ }
+}
