@@ -28,6 +28,18 @@ Connect the repository, then set build command `npm run build`, output folder `a
 
 (Neither workflow has been run yet. If a step fails, the error in the Actions tab will say why. Paste it back and it can be fixed.)
 
+## Pre-built map data (why places and counts load instantly)
+
+Live public map-data servers are slow and sometimes busy, so the app does **not** ask them when it can avoid it. Instead the deploy workflow (`.github/workflows/pages.yml`) builds small static files from an OpenStreetMap extract of Malaysia and ships them with the app:
+
+- `scripts/build-osm-data.sh` downloads the Geofabrik extract, `scripts/extract-osm.py` keeps petrol stations, food, entertainment, hotspots, attractions, traffic lights, speed cameras and toll booths, and `scripts/build-osm-tiles.ts` cuts them into tiles under `apps/web/public/data/osm/` (not committed).
+- The app loads only the few tiles around where you are looking, so Petrol, nearby places and the traffic-light / camera / toll-plaza counts on a route appear in a fraction of a second.
+- The workflow runs on every push and **every Monday**, so the data stays fresh. The About screen shows the snapshot date.
+- If the "Build map data" step fails, the deploy still works and the app falls back to the slow live Overpass servers (with a timeout and a visible message). Check the Actions tab for the step's log.
+- To try it locally: `pip install osmium`, then `bash scripts/build-osm-data.sh` (downloads about 250 MB) or `bash scripts/build-osm-data.sh scripts/fixtures/sample.osm` for a tiny sample.
+
+The data is OpenStreetMap volunteer data: it can be incomplete or out of date, and it has no ratings or toll prices.
+
 ## What the public demo servers mean
 
 By default the app calls free public servers: map tiles (OpenFreeMap), routing (Valhalla demo by FOSSGIS e.V.), search (Photon demo by komoot), full street-address search (Nominatim, only when you press search, as its usage policy asks) and nearby places plus lights, cameras and toll plazas on a route (Overpass API). They are fine for development and a few testers. They are **not** meant for a public launch: they have fair-use rules, no promise of uptime, and the project does not control them.

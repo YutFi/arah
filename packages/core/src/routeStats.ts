@@ -71,7 +71,7 @@ export function buildRouteQuery(routes: Route[], maxPointsPerRoute = 400): strin
       `  nwr["barrier"="toll_booth"](around:${wide},${coords});`,
     );
   }
-  return `[out:json][timeout:40];\n(\n${blocks.join("\n")}\n);\nout center;`;
+  return `[out:json][timeout:25];\n(\n${blocks.join("\n")}\n);\nout center;`;
 }
 
 interface Element {

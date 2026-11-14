@@ -1,4 +1,7 @@
+import { useEffect, useState } from "react";
+import type { Manifest } from "@arah/core";
 import type { AwasState } from "../lib/awasData";
+import { getManifest } from "../lib/osmData";
 import { config } from "../lib/config";
 
 interface Props {
@@ -15,6 +18,17 @@ function host(url: string) {
 }
 
 export function AboutSheet({ awas, onClose }: Props) {
+  const [snap, setSnap] = useState<Manifest | null | undefined>(undefined);
+  useEffect(() => {
+    void getManifest().then(setSnap);
+  }, []);
+  const snapText =
+    snap === undefined
+      ? "Checking…"
+      : snap
+        ? `Places, traffic lights, cameras and toll plazas come from an OpenStreetMap snapshot built on ${new Date(snap.builtAt).toLocaleDateString("en-MY", { day: "numeric", month: "short", year: "numeric" })} (${snap.counts.places.toLocaleString()} places, ${snap.counts.signals.toLocaleString()} traffic lights, ${snap.counts.cameras.toLocaleString()} cameras, ${snap.counts.tolls.toLocaleString()} toll booths). It refreshes weekly.`
+        : "The pre-built OpenStreetMap snapshot is not available, so places and counts use a slower live server.";
+
   const awasText =
     awas.status === "loaded"
       ? `${awas.cameras.length} verified camera record(s) loaded${awas.skipped ? `, ${awas.skipped} skipped (failed checks)` : ""}.`
@@ -35,6 +49,9 @@ export function AboutSheet({ awas, onClose }: Props) {
         <h3>What works now</h3>
         <p>Search by place name, street address or coordinates, a pin you can drop with a long press, nearby petrol, food, entertainment, hotspots and attractions, routes with alternatives, turn-by-turn directions with voice, current speed, rerouting, and a simulated drive for testing.</p>
         <p>Route cards count traffic lights, mapped speed cameras and toll plazas from OpenStreetMap. Volunteers map these, so the real numbers can be higher.</p>
+
+        <h3>Map data</h3>
+        <p>{snapText}</p>
 
         <h3>What does not exist yet</h3>
         <ul>

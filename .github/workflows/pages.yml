@@ -3,6 +3,8 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+  schedule:
+    - cron: "17 3 * * 1" # every Monday: refresh the map data from OpenStreetMap
 permissions:
   contents: read
   pages: write
@@ -22,6 +24,17 @@ jobs:
       - run: npm ci
       - run: npm test
       - run: npm run validate-data
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      # Pre-builds petrol, food, traffic-light, camera and toll-plaza data from OpenStreetMap so the
+      # phone loads it instantly. If this step fails the app still works, but falls back to a slow
+      # public server (see docs/DEPLOYMENT.md).
+      - name: Build map data
+        continue-on-error: true
+        run: |
+          pip install osmium
+          bash scripts/build-osm-data.sh
       - run: npm run build
         env:
           VITE_BASE: /${{ github.event.repository.name }}/

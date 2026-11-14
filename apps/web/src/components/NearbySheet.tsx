@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { CATEGORIES, formatDistance, haversine, type LatLng, type Poi } from "@arah/core";
 import { CatIcon, CATEGORY_UI } from "../lib/categories";
 
@@ -14,6 +15,14 @@ interface Props {
 }
 
 export function NearbySheet({ pois, from, fromYou, status, error, activeCount, onPick, onRetry, onClose }: Props) {
+  // Pre-built data answers instantly. If this takes a while we are waiting on a slow public server.
+  const [slow, setSlow] = useState(false);
+  useEffect(() => {
+    setSlow(false);
+    if (status !== "loading") return;
+    const t = setTimeout(() => setSlow(true), 3500);
+    return () => clearTimeout(t);
+  }, [status]);
   const label = (id: string) => CATEGORIES.find((c) => c.id === id)?.label ?? "";
   return (
     <div className="sheet nearby" role="region" aria-label="Places nearby" style={{ paddingBottom: "max(12px, env(safe-area-inset-bottom))" }}>
@@ -27,7 +36,12 @@ export function NearbySheet({ pois, from, fromYou, status, error, activeCount, o
         <button className="icon-btn" aria-label="Hide places" onClick={onClose}>✕</button>
       </div>
 
-      {status === "loading" && <div className="note">Looking for places nearby…</div>}
+      {status === "loading" && (
+        <div className="note">
+          Looking for places nearby…
+          {slow && " Still waiting: the free map data server is slow right now."}
+        </div>
+      )}
       {status === "error" && (
         <div className="note error">
           {error} <button className="link" onClick={onRetry}>Try again</button>

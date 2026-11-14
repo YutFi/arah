@@ -150,3 +150,55 @@ describe("route features", () => {
     expect(countRouteFeatures(route, null)).toEqual({ signals: [], cameras: [], tolls: [] });
   });
 });
+
+import {
+  buildAllTiles,
+  cellKey,
+  cellsAlongRoute,
+  cellsForCircle,
+  POI_CELL_DEG,
+  roadTileToElements,
+  rowToPoi,
+  poiToRow,
+  ROAD_CELL_DEG,
+} from "./index";
+
+describe("map data tiles", () => {
+  it("gives the same cell for the same point and covers a circle", () => {
+    const p = { lat: 3.139, lng: 101.6869 };
+    expect(cellKey(p, POI_CELL_DEG)).toBe("1016_31");
+    expect(cellsForCircle(p, 2000, POI_CELL_DEG)).toContain("1016_31");
+    // a point right on a cell edge needs both cells
+    expect(cellsForCircle({ lat: 3.1, lng: 101.6 }, 1500, POI_CELL_DEG).length).toBeGreaterThan(1);
+  });
+
+  it("lists the tiles along a long straight route even with no points in between", () => {
+    const cells = cellsAlongRoute([{ lat: 3.0, lng: 101.0 }, { lat: 3.0, lng: 101.6 }], ROAD_CELL_DEG);
+    // 0.6 degrees of longitude is about 66 km: at least 3 tiles of 0.25 degrees
+    expect(cells.length).toBeGreaterThanOrEqual(3);
+  });
+
+  it("builds tiles and a manifest from extracted elements, then reads them back", () => {
+    const el = (id: number, lat: number, lon: number, tags: Record<string, string>) => ({ type: "node", id, lat, lon, tags });
+    const { poi, road, manifest } = buildAllTiles(
+      [
+        el(1, 3.1, 101.7, { amenity: "fuel", brand: "Test Petrol" }),
+        el(2, 3.1, 101.7, { amenity: "cafe" }), // no name: dropped
+        el(3, 3.1, 101.7, { highway: "traffic_signals" }),
+        el(4, 3.11, 101.71, { highway: "speed_camera", maxspeed: "90" }),
+        el(5, 3.12, 101.72, { barrier: "toll_booth", name: "Test Plaza" }),
+        el(6, 51.5, -0.1, { highway: "traffic_signals" }), // outside Malaysia
+      ],
+      "2026-01-01T00:00:00Z",
+      "test",
+    );
+    expect(manifest.counts).toEqual({ places: 1, signals: 1, cameras: 1, tolls: 1 });
+    const row = poi.get(cellKey({ lat: 3.1, lng: 101.7 }, POI_CELL_DEG))![0]!;
+    expect(rowToPoi(row)).toMatchObject({ name: "Test Petrol", category: "fuel", lat: 3.1, lng: 101.7 });
+    expect(poiToRow(rowToPoi(row))).toEqual(row);
+    const tile = road.get(cellKey({ lat: 3.1, lng: 101.7 }, ROAD_CELL_DEG))!;
+    const back = roadTileToElements(tile);
+    expect(back.map((e) => e.tags.highway ?? e.tags.barrier).sort()).toEqual(["speed_camera", "toll_booth", "traffic_signals"]);
+    expect(manifest.poiCells).toEqual([cellKey({ lat: 3.1, lng: 101.7 }, POI_CELL_DEG)]);
+  });
+});

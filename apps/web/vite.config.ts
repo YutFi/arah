@@ -32,7 +32,16 @@ export default defineConfig({
         // Cache the app shell and our own static datasets. Map tiles, routing and
         // search calls always go to the network (never cached from here).
         globPatterns: ["**/*.{js,mjs,css,html,png,svg,json,webmanifest}"],
+        // The map-data tiles (thousands of small files) are cached as they are used instead.
+        globIgnores: ["data/osm/**"],
         navigateFallback: "index.html",
+        runtimeCaching: [
+          {
+            urlPattern: ({ url }: { url: URL }) => url.pathname.includes("/data/osm/"),
+            handler: "StaleWhileRevalidate",
+            options: { cacheName: "osm-data", expiration: { maxEntries: 600, maxAgeSeconds: 30 * 24 * 3600 } },
+          },
+        ],
       },
     }),
   ],

@@ -15,4 +15,12 @@ jobs:
       - run: npm run typecheck
       - run: npm test
       - run: npm run validate-data   # the data gate: no source / no verified date = fail
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Map data pipeline self-test (tiny sample file, no download)
+        run: |
+          pip install osmium
+          bash scripts/build-osm-data.sh scripts/fixtures/sample.osm
+          node -e "const m=require('./apps/web/public/data/osm/manifest.json'); if(m.counts.places!==3||m.counts.signals!==1||m.counts.cameras!==1||m.counts.tolls!==1){console.error('unexpected counts',m.counts);process.exit(1)}"
       - run: npm run build

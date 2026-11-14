@@ -9,3 +9,4 @@ export * from "./simulate";
 export * from "./places";
 export * from "./query";
 export * from "./routeStats";
+export * from "./tiles";

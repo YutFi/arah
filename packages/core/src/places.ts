@@ -121,7 +121,7 @@ export function buildOverpassQuery(
   if (!Number.isFinite(center.lat) || !Number.isFinite(center.lng)) throw new Error("Bad coordinates");
   const r = Math.round(Math.min(MAX_RADIUS_M, Math.max(MIN_RADIUS_M, radiusM)));
   const around = `(around:${r},${center.lat.toFixed(5)},${center.lng.toFixed(5)})`;
-  const parts: string[] = ["[out:json][timeout:20];"];
+  const parts: string[] = ["[out:json][timeout:12];"];
   for (const id of ids) {
     const cat = CATEGORIES.find((c) => c.id === id);
     if (!cat) continue;
