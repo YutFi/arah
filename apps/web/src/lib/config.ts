@@ -13,6 +13,13 @@ export const config = {
   routingUrl: (env.VITE_ROUTING_URL as string | undefined) ?? "https://valhalla1.openstreetmap.de",
   /** Photon search server (public demo run by komoot). */
   geocoderUrl: (env.VITE_GEOCODER_URL as string | undefined) ?? "https://photon.komoot.io",
+  /** Photon is tried first for search; Nominatim (OpenStreetMap) is the fallback for full street addresses. */
+  addressUrl: (env.VITE_ADDRESS_URL as string | undefined) ?? "https://nominatim.openstreetmap.org",
+  /** Overpass API for "what is near me" (public demo servers, tried in this order). */
+  poiUrls: ((env.VITE_POI_URL as string | undefined)?.split(",").map((s) => s.trim()).filter(Boolean)) ?? [
+    "https://overpass-api.de/api/interpreter",
+    "https://overpass.kumi.systems/api/interpreter",
+  ],
   /** Where the map opens before we know your location: Kuala Lumpur. */
   defaultCenter: { lat: 3.139, lng: 101.6869 },
   defaultZoom: 11,

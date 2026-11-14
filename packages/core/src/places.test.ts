@@ -1,0 +1,152 @@
+import { describe, expect, it } from "vitest";
+import {
+  addressFallbacks,
+  buildOverpassQuery,
+  buildRouteQuery,
+  countRouteFeatures,
+  encodePolyline,
+  parseValhallaTrip,
+  simplifyLine,
+  classify,
+  looksLikeAddress,
+  nearestPerCategory,
+  parseCoordinates,
+  parseOverpass,
+} from "./index";
+
+describe("nearby places", () => {
+  it("builds a query with one block per category and a limit", () => {
+    const q = buildOverpassQuery({ lat: 3.1, lng: 101.7 }, 2000, ["fuel", "food"]);
+    expect(q).toContain("[out:json]");
+    expect(q).toContain('nwr["amenity"~"^(fuel)$"](around:2000,3.10000,101.70000);');
+    expect(q).toContain('nwr["amenity"~"^(restaurant|fast_food|food_court)$"]["name"]');
+    expect(q).toContain(".food out center 60;");
+    // petrol stations may be unnamed, restaurants may not
+    expect(q.split("\n").find((l) => l.includes("fuel)$"))).not.toContain('["name"]');
+  });
+
+  it("clamps the radius and rejects bad coordinates", () => {
+    expect(buildOverpassQuery({ lat: 3, lng: 101 }, 999999, ["fuel"])).toContain("around:5000,");
+    expect(buildOverpassQuery({ lat: 3, lng: 101 }, 1, ["fuel"])).toContain("around:300,");
+    expect(() => buildOverpassQuery({ lat: NaN, lng: 101 }, 2000, ["fuel"])).toThrow();
+  });
+
+  it("files a place under the first matching category", () => {
+    expect(classify({ amenity: "cafe" })).toEqual({ category: "hot", sub: "Cafe" });
+    expect(classify({ tourism: "theme_park" })?.category).toBe("fun");
+    expect(classify({ amenity: "cafe", tourism: "attraction" })?.category).toBe("see");
+    expect(classify({ shop: "bakery" })).toBeNull();
+  });
+
+  it("reads nodes and ways, skips unnamed, duplicates and out-of-Malaysia points", () => {
+    const pois = parseOverpass({
+      elements: [
+        { type: "node", id: 1, lat: 3.1, lon: 101.7, tags: { amenity: "fuel", brand: "TestBrand" } },
+        { type: "way", id: 2, center: { lat: 3.11, lon: 101.71 }, tags: { shop: "mall", name: "Test Mall", opening_hours: "Mo-Su 10:00-22:00" } },
+        { type: "node", id: 3, lat: 3.1, lon: 101.7, tags: { amenity: "cafe" } }, // no name
+        { type: "node", id: 1, lat: 3.1, lon: 101.7, tags: { amenity: "fuel", brand: "TestBrand" } }, // duplicate
+        { type: "node", id: 4, lat: 51.5, lon: -0.1, tags: { amenity: "cafe", name: "Far away" } }, // not Malaysia
+        { type: "node", id: 5, tags: { amenity: "cafe", name: "No position" } },
+        { type: "node", id: 6, lat: 3.1, lon: 101.7, tags: { shop: "bakery", name: "Not a category" } },
+      ],
+    });
+    expect(pois.map((p) => p.id)).toEqual(["node/1", "way/2"]);
+    expect(pois[0]).toMatchObject({ name: "TestBrand", category: "fuel" });
+    expect(pois[1]).toMatchObject({ name: "Test Mall", category: "hot", hours: "Mo-Su 10:00-22:00" });
+    expect(parseOverpass(null)).toEqual([]);
+    expect(parseOverpass({ remark: "runtime error" })).toEqual([]);
+  });
+
+  it("sorts nearest first with a cap per category", () => {
+    const mk = (id: string, lat: number, category: "fuel" | "food") => ({ id, name: id, category, sub: "x", lat, lng: 101.7 });
+    const out = nearestPerCategory(
+      [mk("far", 3.2, "fuel"), mk("near", 3.101, "fuel"), mk("mid", 3.15, "fuel"), mk("food1", 3.3, "food")],
+      { lat: 3.1, lng: 101.7 },
+      2,
+    );
+    expect(out.map((p) => p.id)).toEqual(["near", "mid", "food1"]);
+  });
+});
+
+describe("search text helpers", () => {
+  it("reads coordinates in either order and only inside Malaysia", () => {
+    expect(parseCoordinates("3.0366, 101.5416")).toEqual({ lat: 3.0366, lng: 101.5416 });
+    expect(parseCoordinates("3.0366 101.5416")).toEqual({ lat: 3.0366, lng: 101.5416 });
+    expect(parseCoordinates("101.5416, 3.0366")).toEqual({ lat: 3.0366, lng: 101.5416 });
+    expect(parseCoordinates("51.5, -0.12")).toBeNull();
+    expect(parseCoordinates("12 34")).toBeNull();
+    expect(parseCoordinates("Kota Kemuning")).toBeNull();
+  });
+
+  it("knows an address from a place name", () => {
+    expect(looksLikeAddress("Jalan Plumbum 7/100, Kota Kemuning")).toBe(true);
+    expect(looksLikeAddress("Sunway Pyramid")).toBe(false);
+  });
+
+  it("simplifies a long address step by step", () => {
+    const f = addressFallbacks("No 1, Jalan Plumbum, 40460 Kota Kemuning, Shah Alam Selangor");
+    expect(f).toEqual([
+      "Jalan Plumbum, Kota Kemuning, Shah Alam Selangor",
+      "Kota Kemuning, Shah Alam Selangor",
+      "Shah Alam Selangor",
+    ]);
+  });
+
+  it("splits at the postcode when there are no commas, and drops the country", () => {
+    const f = addressFallbacks("Jalan Plumbum 7/100 40460 Kota Kemuning Shah Alam Selangor Malaysia");
+    expect(f[0]).toBe("Jalan Plumbum 7/100, Kota Kemuning Shah Alam Selangor Malaysia");
+    expect(f).toContain("Kota Kemuning Shah Alam Selangor Malaysia");
+    expect(addressFallbacks("Sunway Pyramid")).toEqual([]);
+  });
+});
+
+describe("route features", () => {
+  // ~2.2 km: 1.1 km north, then 1.1 km east (synthetic, not a real road)
+  const route = parseValhallaTrip({
+    summary: { length: 2.2, time: 240 },
+    legs: [
+      {
+        shape: encodePolyline([
+          { lat: 3.1, lng: 101.7 },
+          { lat: 3.11, lng: 101.7 },
+          { lat: 3.11, lng: 101.71 },
+        ]),
+        maneuvers: [{ instruction: "x", type: 1, begin_shape_index: 0 }],
+      },
+    ],
+  });
+  const node = (id: number, lat: number, lon: number, tags: Record<string, string>) => ({ type: "node", id, lat, lon, tags });
+
+  it("simplifies a straight line to its end points", () => {
+    const line = Array.from({ length: 50 }, (_, i) => ({ lat: 3.1 + i * 0.0002, lng: 101.7 }));
+    expect(simplifyLine(line, 5)).toHaveLength(2);
+  });
+
+  it("asks for lights, cameras and toll booths around every route", () => {
+    const q = buildRouteQuery([route]);
+    expect(q).toContain('node["highway"="traffic_signals"](around:');
+    expect(q).toContain('node["highway"="speed_camera"](around:');
+    expect(q).toContain('nwr["barrier"="toll_booth"](around:');
+    expect(q).toContain("out center;");
+  });
+
+  it("counts only what is on the route and merges duplicates", () => {
+    const f = countRouteFeatures(route, {
+      elements: [
+        node(1, 3.103, 101.70005, { highway: "traffic_signals" }),
+        node(2, 3.10302, 101.7001, { highway: "traffic_signals" }), // same junction (other side)
+        node(3, 3.11, 101.7050, { highway: "traffic_signals" }),
+        node(4, 3.105, 101.7006, { highway: "traffic_signals" }), // ~66 m off the road: not on this route
+        node(5, 3.107, 101.70002, { highway: "speed_camera", maxspeed: "90" }),
+        node(6, 3.108, 101.70002, { barrier: "toll_booth", name: "Test Plaza" }),
+        node(7, 3.10805, 101.70002, { barrier: "toll_booth", name: "Test Plaza" }), // second lane
+        node(8, 3.109, 101.7, { amenity: "cafe" }),
+      ],
+    });
+    expect(f.signals).toHaveLength(2);
+    expect(f.cameras).toEqual([expect.objectContaining({ maxspeed: "90" })]);
+    expect(f.tolls).toHaveLength(1);
+    expect(f.tolls[0]?.name).toBe("Test Plaza");
+    expect(countRouteFeatures(route, null)).toEqual({ signals: [], cameras: [], tolls: [] });
+  });
+});

@@ -30,7 +30,7 @@ Connect the repository, then set build command `npm run build`, output folder `a
 
 ## What the public demo servers mean
 
-By default the app calls three free public servers: map tiles (OpenFreeMap), routing (Valhalla demo by FOSSGIS e.V.) and search (Photon demo by komoot). They are fine for development and a few testers. They are **not** meant for a public launch: they have fair-use rules, no promise of uptime, and the project does not control them.
+By default the app calls free public servers: map tiles (OpenFreeMap), routing (Valhalla demo by FOSSGIS e.V.), search (Photon demo by komoot), full street-address search (Nominatim, only when you press search, as its usage policy asks) and nearby places plus lights, cameras and toll plazas on a route (Overpass API). They are fine for development and a few testers. They are **not** meant for a public launch: they have fair-use rules, no promise of uptime, and the project does not control them.
 
 To switch to your own servers, create `apps/web/.env.local`:
 
@@ -38,6 +38,8 @@ To switch to your own servers, create `apps/web/.env.local`:
 VITE_STYLE_URL=https://your-tiles.example/style.json
 VITE_ROUTING_URL=https://your-routing.example
 VITE_GEOCODER_URL=https://your-search.example
+VITE_ADDRESS_URL=https://your-nominatim.example
+VITE_POI_URL=https://your-overpass.example/api/interpreter
 ```
 
 Hosting your own Valhalla for Malaysia (about the size of a small VM: a Geofabrik extract of Malaysia, Singapore and Brunei) is covered in the architecture document, section 8.

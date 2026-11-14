@@ -6,3 +6,6 @@ export * from "./navigator";
 export * from "./awas";
 export * from "./format";
 export * from "./simulate";
+export * from "./places";
+export * from "./query";
+export * from "./routeStats";

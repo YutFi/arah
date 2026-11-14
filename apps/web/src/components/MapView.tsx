@@ -4,12 +4,19 @@ import "maplibre-gl/dist/maplibre-gl.css";
 // MapLibre 6 runs map parsing in a separate worker file. Bundlers do not copy it
 // next to the app code on their own, so we give MapLibre its address explicitly.
 import workerUrl from "maplibre-gl/dist/maplibre-gl-worker.mjs?url";
-import type { Fix, LatLng, Route } from "@arah/core";
+import type { LatLng, Poi, Route } from "@arah/core";
 import { config } from "../lib/config";
+import { CATEGORY_UI, iconSvg } from "../lib/categories";
 
 export interface MapHandle {
   getCenter(): LatLng;
   recenter(): void;
+  /** Frame these points, leaving `bottom` pixels free for a sheet. */
+  fit(points: LatLng[], bottom: number): void;
+  /** Bring one point into view above a sheet of `bottom` pixels. */
+  focus(point: LatLng, bottom: number): void;
+  /** Remove the room kept for a sheet. */
+  clearPadding(): void;
 }
 
 interface Props {
@@ -21,6 +28,14 @@ interface Props {
   follow: boolean;
   /** Called when the person drags or rotates the map by hand. */
   onUserMove: () => void;
+  /** Places of interest to show as icons. */
+  pois: Poi[];
+  selectedPoiId: string | null;
+  onPoiClick: (p: Poi) => void;
+  /** Long-press (or right-click) on the map: the person wants to drop a pin. */
+  onLongPress: (p: LatLng) => void;
+  /** The map stopped moving. */
+  onMoveEnd: (center: LatLng) => void;
 }
 
 maplibregl.setWorkerUrl(workerUrl);
@@ -28,7 +43,7 @@ maplibregl.setWorkerUrl(workerUrl);
 const toLine = (r: Route) => r.points.map((p) => [p.lng, p.lat] as [number, number]);
 
 export const MapView = forwardRef<MapHandle, Props>(function MapView(
-  { routes, selected, dest, user, navigating, follow, onUserMove },
+  { routes, selected, dest, user, navigating, follow, onUserMove, pois, selectedPoiId, onPoiClick, onLongPress, onMoveEnd },
   ref,
 ) {
   const el = useRef<HTMLDivElement>(null);
@@ -41,6 +56,9 @@ export const MapView = forwardRef<MapHandle, Props>(function MapView(
   latest.current = { routes, selected, user, navigating, follow };
   const onMove = useRef(onUserMove);
   onMove.current = onUserMove;
+  const poiMarkers = useRef(new Map<string, maplibregl.Marker>());
+  const cb = useRef({ onPoiClick, onLongPress, onMoveEnd });
+  cb.current = { onPoiClick, onLongPress, onMoveEnd };
 
   useImperativeHandle(ref, () => ({
     getCenter() {
@@ -50,6 +68,26 @@ export const MapView = forwardRef<MapHandle, Props>(function MapView(
     recenter() {
       const u = latest.current.user;
       if (u && map.current) map.current.easeTo({ center: [u.lng, u.lat], zoom: Math.max(map.current.getZoom(), 15), duration: 600 });
+    },
+    fit(points, bottom) {
+      const m = map.current;
+      if (!m || points.length === 0) return;
+      const b = new maplibregl.LngLatBounds();
+      for (const p of points) b.extend([p.lng, p.lat]);
+      m.fitBounds(b, { padding: { top: 190, bottom: bottom + 30, left: 40, right: 40 }, maxZoom: 16, duration: 700 });
+    },
+    focus(point, bottom) {
+      const m = map.current;
+      if (!m) return;
+      m.easeTo({
+        center: [point.lng, point.lat],
+        zoom: Math.max(m.getZoom(), 15),
+        padding: { top: 120, bottom, left: 0, right: 0 },
+        duration: 600,
+      });
+    },
+    clearPadding() {
+      map.current?.easeTo({ padding: { top: 0, bottom: 0, left: 0, right: 0 }, duration: 300 });
     },
   }));
 
@@ -103,12 +141,47 @@ export const MapView = forwardRef<MapHandle, Props>(function MapView(
     m.on("rotatestart", (e) => {
       if ((e as { originalEvent?: unknown }).originalEvent) onMove.current();
     });
+    m.on("moveend", () => {
+      const c = m.getCenter();
+      cb.current.onMoveEnd({ lat: c.lat, lng: c.lng });
+    });
+
+    // Long-press to drop a pin (right-click on a computer). A drag, a second
+    // finger or a zoom cancels it, so panning never drops a pin by accident.
+    let pressTimer: ReturnType<typeof setTimeout> | undefined;
+    let pressStart: maplibregl.Point | undefined;
+    const cancelPress = () => {
+      if (pressTimer) clearTimeout(pressTimer);
+      pressTimer = undefined;
+    };
+    m.on("touchstart", (e) => {
+      cancelPress();
+      if (latest.current.navigating || e.points.length !== 1) return;
+      pressStart = e.point;
+      const at = { lat: e.lngLat.lat, lng: e.lngLat.lng };
+      pressTimer = setTimeout(() => {
+        pressTimer = undefined;
+        navigator.vibrate?.(15);
+        cb.current.onLongPress(at);
+      }, 600);
+    });
+    m.on("touchmove", (e) => {
+      if (pressStart && e.point.dist(pressStart) > 10) cancelPress();
+    });
+    for (const ev of ["touchend", "touchcancel", "dragstart", "zoomstart", "rotatestart"] as const) m.on(ev, cancelPress);
+    m.on("contextmenu", (e) => {
+      if (!latest.current.navigating) cb.current.onLongPress({ lat: e.lngLat.lat, lng: e.lngLat.lng });
+    });
+
     // A missing tile or style hiccup must never crash the app.
     m.on("error", () => {});
 
     return () => {
+      cancelPress();
       userMarker.current?.remove();
       destMarker.current?.remove();
+      for (const mk of poiMarkers.current.values()) mk.remove();
+      poiMarkers.current.clear();
       m.remove();
       map.current = null;
       ready.current = false;
@@ -150,6 +223,38 @@ export const MapView = forwardRef<MapHandle, Props>(function MapView(
     destMarker.current = null;
     if (dest) destMarker.current = new maplibregl.Marker({ color: "#e5484d" }).setLngLat([dest.lng, dest.lat]).addTo(m);
   }, [dest]);
+
+  // ---- places of interest: icon markers ------------------------------------
+  useEffect(() => {
+    const m = map.current;
+    if (!m) return;
+    const markers = poiMarkers.current;
+    const keep = new Set(pois.map((p) => p.id));
+    for (const [id, mk] of markers) {
+      if (!keep.has(id)) {
+        mk.remove();
+        markers.delete(id);
+      }
+    }
+    for (const p of pois) {
+      if (markers.has(p.id)) continue;
+      const node = document.createElement("button");
+      node.type = "button";
+      node.className = "poi-marker";
+      node.setAttribute("aria-label", `${p.name}, ${p.sub}`);
+      node.style.setProperty("--cat", CATEGORY_UI[p.category].color);
+      node.innerHTML = iconSvg(p.category, 17);
+      node.addEventListener("click", (ev) => {
+        ev.stopPropagation();
+        cb.current.onPoiClick(p);
+      });
+      markers.set(p.id, new maplibregl.Marker({ element: node }).setLngLat([p.lng, p.lat]).addTo(m));
+    }
+  }, [pois]);
+
+  useEffect(() => {
+    for (const [id, mk] of poiMarkers.current) mk.getElement().classList.toggle("selected", id === selectedPoiId);
+  }, [selectedPoiId, pois]);
 
   // ---- your position --------------------------------------------------------
   useEffect(() => {
