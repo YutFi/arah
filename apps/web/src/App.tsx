@@ -14,6 +14,9 @@ import { SearchPanel } from "./components/SearchPanel";
 import { RoutePreview } from "./components/RoutePreview";
 import { NavHud } from "./components/NavHud";
 import { AboutSheet } from "./components/AboutSheet";
+import { Splash } from "./components/Splash";
+import { LocationHelp, LocationPrimer } from "./components/LocationHelp";
+import { onLocationPermissionChange, queryLocationPermission } from "./lib/permission";
 import { useGeolocation } from "./lib/useGeolocation";
 import { fetchRoutes } from "./lib/routing";
 import { loadAwas, type AwasState } from "./lib/awasData";
@@ -45,6 +48,8 @@ export default function App() {
   const [rerouting, setRerouting] = useState(false);
   const [voiceOn, setVoiceOn] = useState(true);
   const [about, setAbout] = useState(false);
+  const [splashDone, setSplashDone] = useState(false);
+  const [locUI, setLocUI] = useState<"none" | "primer" | "help">("none");
   const [awas, setAwas] = useState<AwasState>({ status: "loading", cameras: [], skipped: 0 });
 
   const announced = useRef(new Set<string>());
@@ -59,6 +64,34 @@ export default function App() {
   useEffect(() => {
     void loadAwas().then(setAwas);
   }, []);
+
+  // ---- location permission: explain first, then ask, then guide if blocked ---
+  const startGeo = geo.start;
+  useEffect(() => {
+    if (!splashDone) return;
+    let cancelled = false;
+    void queryLocationPermission().then((p) => {
+      if (cancelled) return;
+      if (p === "granted") startGeo(false);
+      else if (p === "denied") setLocUI("help");
+      else setLocUI("primer");
+    });
+    const off = onLocationPermissionChange((p) => {
+      if (p === "granted") {
+        setLocUI("none");
+        startGeo(false);
+      }
+    });
+    return () => {
+      cancelled = true;
+      off();
+    };
+  }, [splashDone, startGeo]);
+
+  useEffect(() => {
+    if (geo.status === "active") setLocUI("none");
+    else if (geo.status === "denied") setLocUI((u) => (u === "primer" ? "help" : u));
+  }, [geo.status]);
 
   // ---- routes for the chosen destination ------------------------------------
   useEffect(() => {
@@ -268,6 +301,10 @@ export default function App() {
           className="round locate"
           aria-label="Show my location"
           onClick={() => {
+            if (geo.status === "denied") {
+              setLocUI("help");
+              return;
+            }
             geo.start(false);
             mapRef.current?.recenter();
           }}
@@ -276,8 +313,10 @@ export default function App() {
           ◎
         </button>
       )}
-      {geo.status === "denied" && phase !== "navigating" && (
-        <div className="toast">Location is blocked. Allow it in your browser settings to see where you are.</div>
+      {geo.status === "denied" && phase !== "navigating" && locUI === "none" && (
+        <button className="toast" onClick={() => setLocUI("help")}>
+          Location is off. <u>Tap to turn it on.</u>
+        </button>
       )}
 
       {phase === "preview" && dest && (
@@ -317,6 +356,24 @@ export default function App() {
       )}
 
       {about && <AboutSheet awas={awas} onClose={() => setAbout(false)} />}
+
+      {locUI === "primer" && (
+        <LocationPrimer
+          onAllow={() => geo.start(false)}
+          onSkip={() => setLocUI("none")}
+        />
+      )}
+      {locUI === "help" && (
+        <LocationHelp
+          onRetry={() => {
+            geo.start(false);
+            void queryLocationPermission().then((p) => p === "granted" && setLocUI("none"));
+          }}
+          onClose={() => setLocUI("none")}
+        />
+      )}
+
+      {!splashDone && <Splash onDone={() => setSplashDone(true)} />}
     </div>
   );
 }

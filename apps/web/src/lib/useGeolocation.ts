@@ -52,7 +52,12 @@ export function useGeolocation() {
           setFix(next);
           setStatus("active");
         },
-        (err) => setStatus(err.code === err.PERMISSION_DENIED ? "denied" : "unavailable"),
+        (err) => {
+          if (err.code === err.PERMISSION_DENIED) {
+            stop(); // lets "Try again" start a fresh request later
+            setStatus("denied");
+          } else setStatus("unavailable");
+        },
         { enableHighAccuracy: highAccuracy, maximumAge: 1000, timeout: 20000 },
       );
     },
