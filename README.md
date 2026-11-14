@@ -2,6 +2,9 @@
 
 A privacy-first, open-source navigation app for Malaysia that runs in the phone's browser (PWA) on both iPhone and Android. No accounts, no login, no saved trips.
 
+**Try it on your phone: https://yutfi.github.io/arah/**
+(iPhone: open in Safari, then Share → Add to Home Screen. Android: open in Chrome, then menu → Install app. Allow location when asked.)
+
 > **Status: early preview.** Navigation basics work. Live traffic, toll prices, speed-camera data and speed limits do **not** exist yet, and the app says so on screen instead of guessing.
 
 ## What works now
