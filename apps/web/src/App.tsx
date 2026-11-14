@@ -7,12 +7,14 @@ import {
   matchCamerasToRoute,
   nearestPerCategory,
   pointAtDistance,
+  signalsAhead,
   typicalSpeedKph,
   upcomingCameras,
   type CategoryId,
   type Fix,
   type LatLng,
   type NavUpdate,
+  type RouteFeatures,
   type Poi,
   type Route,
   DEFAULT_RADIUS_M,
@@ -46,6 +48,9 @@ import { savePlace, type SavedPlace } from "./lib/saved";
 
 type Phase = "browse" | "preview" | "navigating";
 const SIM_SPEEDS = [50, 120, 300, 5]; // 5 km/h is a crawl, to try the slow-traffic prompt
+/** Driving map: how far ahead lights/cameras are drawn, and how often the set is refreshed. */
+const MARK_AHEAD_M = 1500;
+const MARK_STEP_M = 150;
 const AVOID_AHEAD_M = 1500;
 // Only the test build sets this (a shorter wait before the slow-traffic prompt).
 const JAM_WINDOW_S = Number(import.meta.env.VITE_JAM_WINDOW_S) || undefined;
@@ -101,6 +106,8 @@ export default function App() {
   const [selPlace, setSelPlace] = useState<Place | null>(null);
   const [naming, setNaming] = useState(false);
   const [stats, setStats] = useState<StatsState>({ status: "idle" });
+  /** Lights, cameras and toll plazas on the route being driven (looked up again after a reroute). */
+  const [navFeatures, setNavFeatures] = useState<RouteFeatures | null>(null);
   const [viewCenter, setViewCenter] = useState<LatLng | null>(null);
 
   const announced = useRef(new Set<string>());
@@ -215,6 +222,22 @@ export default function App() {
       });
     return () => ac.abort();
   }, [phase, routes]);
+
+  // While driving: the same lookup for the route in use, so lights can be drawn and counted ahead.
+  useEffect(() => {
+    if (phase !== "navigating" || !route) {
+      setNavFeatures(null);
+      return;
+    }
+    const ac = new AbortController();
+    setNavFeatures(null);
+    fetchRouteFeatures([route], ac.signal)
+      .then((list) => !ac.signal.aborted && setNavFeatures(list[0] ?? null))
+      .catch(() => {
+        /* no icons then; driving is not affected */
+      });
+    return () => ac.abort();
+  }, [phase, route]);
 
   // If we started from the map centre and a GPS fix then arrives, switch to it.
   useEffect(() => {
@@ -558,11 +581,20 @@ export default function App() {
   const browse = phase === "browse";
   const showSearchHere =
     browse && !selPlace && nearby.active.length > 0 && nearby.status !== "loading" && !!viewCenter && !!nearby.center && haversine(viewCenter, nearby.center) > DEFAULT_RADIUS_M / 2;
+  // While driving, only the next stretch is drawn (and redrawn every ~150 m) so the map stays smooth.
+  const alongBucket = nav ? Math.floor(nav.distanceAlongM / MARK_STEP_M) * MARK_STEP_M : 0;
   const routeMarks = useMemo(() => {
+    if (phase === "navigating") {
+      return navFeatures ? buildMarks(navFeatures, { fromM: alongBucket - 100, toM: alongBucket + MARK_AHEAD_M }) : null;
+    }
     if (phase !== "preview" || stats.status !== "loaded") return null;
     const f = stats.list[sel];
     return f ? buildMarks(f) : null;
-  }, [phase, stats, sel]);
+  }, [phase, stats, sel, navFeatures, alongBucket]);
+  const lightsInfo = useMemo(
+    () => (phase === "navigating" && navFeatures && nav && nav.status !== "arrived" ? signalsAhead(navFeatures.signals, nav.distanceAlongM) : null),
+    [phase, navFeatures, nav],
+  );
   const placeDistance = selPlace && nearbyFrom !== null && geo.fix ? haversine(geo.fix, selPlace) : null;
 
   return (
@@ -689,6 +721,7 @@ export default function App() {
           showRecenter={!follow}
           onRecenter={() => setFollow(true)}
           onStop={stopNavigation}
+          lights={lightsInfo}
         />
       )}
 

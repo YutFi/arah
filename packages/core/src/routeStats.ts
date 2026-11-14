@@ -19,6 +19,33 @@ export interface RouteFeatures {
 
 export const MAX_STATS_ROUTE_M = 250_000;
 
+/**
+ * Traffic light rules. The routing server drives along the same OpenStreetMap roads
+ * the lights are mapped on, so a light that really controls YOUR road sits almost on
+ * the route line. Lights further out are usually the other carriageway, a parallel
+ * service road or a side road, so they are not counted.
+ */
+export const SIGNAL_MAX_OFFSET_M = 15;
+/**
+ * One junction is often mapped as several light nodes (one per carriageway or per
+ * approach, up to ~50 m apart). Lights closer together than this along the route are
+ * counted once.
+ */
+export const SIGNAL_MERGE_GAP_M = 60;
+
+/** Lights still ahead of `alongM`, and how far the next one is (null when none). */
+export function signalsAhead(signals: readonly { distanceAlongM: number }[], alongM: number): { nextM: number | null; left: number } {
+  let nextM: number | null = null;
+  let left = 0;
+  for (const s of signals) {
+    const d = s.distanceAlongM - alongM;
+    if (d < -15) continue; // just passed
+    left++;
+    if (nextM === null || d < nextM) nextM = Math.max(0, d);
+  }
+  return { nextM, left };
+}
+
 /** Douglas-Peucker: keep the shape of a line with fewer points. */
 export function simplifyLine(points: LatLng[], toleranceM: number): LatLng[] {
   const n = points.length;
@@ -111,7 +138,7 @@ export function countRouteFeatures(route: Route, json: unknown): RouteFeatures {
     const kind = t.highway === "traffic_signals" ? "signal" : t.highway === "speed_camera" ? "camera" : t.barrier === "toll_booth" ? "toll" : null;
     if (!kind) continue;
     const s = snapToRoute(route, p, 0, route.points.length);
-    const limit = kind === "toll" ? 45 : 25;
+    const limit = kind === "toll" ? 45 : kind === "signal" ? SIGNAL_MAX_OFFSET_M : 25;
     if (s.offRouteM > limit) continue;
 
     if (kind === "signal") res.signals.push({ distanceAlongM: s.distanceAlongM, lat, lng });
@@ -119,7 +146,7 @@ export function countRouteFeatures(route: Route, json: unknown): RouteFeatures {
     else res.tolls.push({ distanceAlongM: s.distanceAlongM, lat, lng, name: t.name ?? t.operator ?? "Toll plaza" });
   }
   return {
-    signals: dedupe(res.signals, 40),
+    signals: dedupe(res.signals, SIGNAL_MERGE_GAP_M),
     cameras: dedupe(res.cameras, 40),
     tolls: dedupe(res.tolls, 400),
   };

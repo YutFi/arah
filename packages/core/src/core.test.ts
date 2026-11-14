@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
   angleDiff,
+  countRouteFeatures,
+  signalsAhead,
   bearing,
   createNavigator,
   decodePolyline,
@@ -365,5 +367,51 @@ describe("route overlap", () => {
     const other = mk([{ lat: 3.1, lng: 101.6055 }, { lat: 3.125, lng: 101.6055 }]);
     expect(routeOverlap(same, a)).toBeGreaterThan(0.9);
     expect(routeOverlap(other, a)).toBeLessThan(0.2);
+  });
+});
+
+
+// ---- traffic light counting ------------------------------------------------
+describe("traffic light counting", () => {
+  // A straight 2.2 km road going north. 0.00001 degrees of latitude is about 1.1 m.
+  const pts: LatLng[] = [];
+  for (let i = 0; i <= 22; i++) pts.push({ lat: 3.1 + i * 0.0009, lng: 101.7 });
+  const cum = pts.map((p, i) => (i === 0 ? 0 : haversine(pts[0] as LatLng, p)));
+  const straight = { points: pts, cumDist: cum, lengthM: cum[cum.length - 1] as number, durationS: 300, maneuvers: [], hasToll: false };
+  const node = (lat: number, lng: number) => ({ type: "node", lat, lon: lng, tags: { highway: "traffic_signals" } });
+
+  it("counts a junction mapped as several nodes once, and drops lights that are not on this road", () => {
+    const json = {
+      elements: [
+        node(3.103, 101.7), // junction, on the road
+        node(3.1033, 101.70005), // same junction, other carriageway node ~35 m on
+        node(3.1043, 101.7), // still the same junction (about 140 m on) is a different light: kept below
+        node(3.108, 101.7002), // ~22 m to the side: a parallel service road, not ours
+        node(3.112, 101.7), // a separate light further on
+        node(3.1124, 101.7), // 44 m after it: same junction as the one before
+      ],
+    };
+    const f = countRouteFeatures(straight, json);
+    expect(f.signals.length).toBe(3);
+    const d = f.signals.map((s) => Math.round(s.distanceAlongM));
+    expect(d[0]).toBeGreaterThan(320);
+    expect(d[0]).toBeLessThan(345);
+    expect(d[1]).toBeGreaterThan(460);
+    expect(d[1]).toBeLessThan(480);
+    expect(d[2]).toBeGreaterThan(1320);
+    expect(d[2]).toBeLessThan(1345);
+  });
+
+  it("ignores lights well off the road and outside Malaysia", () => {
+    const f = countRouteFeatures(straight, { elements: [node(3.105, 101.7003), node(51.5, -0.1)] });
+    expect(f.signals.length).toBe(0);
+  });
+
+  it("tells how many lights are left and how far the next one is", () => {
+    const sig = [{ distanceAlongM: 300 }, { distanceAlongM: 900 }, { distanceAlongM: 1500 }];
+    expect(signalsAhead(sig, 0)).toEqual({ nextM: 300, left: 3 });
+    expect(signalsAhead(sig, 330)).toEqual({ nextM: 570, left: 2 });
+    expect(signalsAhead(sig, 305).left).toBe(3); // a few metres past it: GPS error, still shown as 'now'
+    expect(signalsAhead(sig, 1600)).toEqual({ nextM: null, left: 0 });
   });
 });

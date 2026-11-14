@@ -46,6 +46,10 @@ maplibregl.setWorkerUrl(workerUrl);
 /** Lights are small dots; draw at most this many so a very long route stays smooth. */
 const MAX_LIGHT_MARKERS = 400;
 
+/** Traffic light: dark housing with red, amber and green lamps (sized by CSS). */
+const lightSvg =
+  '<svg viewBox="0 0 16 26" aria-hidden="true"><rect x="1" y="1" width="14" height="24" rx="5" fill="#1f2937" stroke="#fff" stroke-width="1.6"/><circle cx="8" cy="7" r="3" fill="#ef4444"/><circle cx="8" cy="13" r="3" fill="#fbbf24"/><circle cx="8" cy="19" r="3" fill="#22c55e"/></svg>';
+
 const markSvgAttrs = 'viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"';
 
 /**
@@ -87,7 +91,7 @@ export const MapView = forwardRef<MapHandle, Props>(function MapView(
     raf: 0,
   });
   const poiMarkers = useRef(new Map<string, maplibregl.Marker>());
-  const markMarkers = useRef<maplibregl.Marker[]>([]);
+  const markMarkers = useRef<Map<string, maplibregl.Marker>>(new Map());
   const lastRoutes = useRef<Route[] | null>(null);
     const cb = useRef({ onPoiClick, onLongPress, onMoveEnd });
   cb.current = { onPoiClick, onLongPress, onMoveEnd };
@@ -218,8 +222,8 @@ export const MapView = forwardRef<MapHandle, Props>(function MapView(
       destMarker.current?.remove();
       for (const mk of poiMarkers.current.values()) mk.remove();
       poiMarkers.current.clear();
-      for (const mk of markMarkers.current) mk.remove();
-      markMarkers.current = [];
+      for (const mk of markMarkers.current.values()) mk.remove();
+      markMarkers.current.clear();
       m.remove();
       map.current = null;
       ready.current = false;
@@ -260,40 +264,68 @@ export const MapView = forwardRef<MapHandle, Props>(function MapView(
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [routes, selected]);
 
-  // ---- route marks: lights (dots), cameras and toll plazas (pins) -----------
+  // ---- route marks: traffic light icons, cameras and toll plazas (pins) -----
+  // Marks are matched by position so that moving the window along the route while
+  // driving only adds or removes the few that changed (no flicker, no extra work).
   useEffect(() => {
     const m = map.current;
     if (!m) return;
-    for (const mk of markMarkers.current) mk.remove();
-    markMarkers.current = [];
-    if (!marks) return;
-    const add = (node: HTMLElement, lat: number, lng: number) =>
-      markMarkers.current.push(new maplibregl.Marker({ element: node }).setLngLat([lng, lat]).addTo(m));
-    for (const p of marks.signals.slice(0, MAX_LIGHT_MARKERS)) {
-      const node = document.createElement("div");
-      node.className = "mark signal";
-      node.setAttribute("role", "img");
-      node.setAttribute("aria-label", "Traffic light");
-      add(node, p.lat, p.lng);
+    const have = markMarkers.current;
+    const want = new Map<string, { lat: number; lng: number; make: () => HTMLElement }>();
+    if (marks) {
+      const sizeClass = navigating ? " nav" : "";
+      for (const p of marks.signals.slice(0, MAX_LIGHT_MARKERS)) {
+        want.set(`s${navigating ? "n" : "p"}:${p.lat},${p.lng}`, {
+          ...p,
+          make: () => {
+            const node = document.createElement("div");
+            node.className = `mark signal${sizeClass}`;
+            node.setAttribute("role", "img");
+            node.setAttribute("aria-label", "Traffic light");
+            node.innerHTML = lightSvg;
+            return node;
+          },
+        });
+      }
+      for (const c of marks.cameras) {
+        want.set(`c:${c.lat},${c.lng}`, {
+          ...c,
+          make: () => {
+            const node = document.createElement("div");
+            node.className = "mark camera";
+            node.setAttribute("role", "img");
+            node.setAttribute("aria-label", c.maxspeed ? `Speed camera mapped on OpenStreetMap, limit ${c.maxspeed}` : "Speed camera mapped on OpenStreetMap");
+            node.innerHTML = `<svg ${markSvgAttrs} width="15" height="15"><path d="M4 8h3l1.5-2h7L17 8h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>`;
+            return node;
+          },
+        });
+      }
+      for (const t of marks.tolls) {
+        want.set(`t:${t.lat},${t.lng}`, {
+          ...t,
+          make: () => {
+            const node = document.createElement("div");
+            node.className = `mark toll${t.rm != null ? " priced" : ""}`;
+            node.setAttribute("role", "img");
+            node.setAttribute("aria-label", t.rm != null ? `Toll plaza ${t.name}, about RM ${t.rm.toFixed(2)}` : `Toll plaza ${t.name}, price not available`);
+            node.innerHTML = `<svg ${markSvgAttrs} width="14" height="14"><path d="M3 20h18M6 20V9l6-5 6 5v11M10 20v-6h4v6"/></svg>${t.rm != null ? `<span>RM ${t.rm.toFixed(2)}</span>` : ""}`;
+            return node;
+          },
+        });
+      }
     }
-    for (const c of marks.cameras) {
-      const node = document.createElement("div");
-      node.className = "mark camera";
-      node.setAttribute("role", "img");
-      node.setAttribute("aria-label", c.maxspeed ? `Speed camera mapped on OpenStreetMap, limit ${c.maxspeed}` : "Speed camera mapped on OpenStreetMap");
-      node.innerHTML = `<svg ${markSvgAttrs} width="15" height="15"><path d="M4 8h3l1.5-2h7L17 8h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>`;
-      add(node, c.lat, c.lng);
+    for (const [k, mk] of have) {
+      if (!want.has(k)) {
+        mk.remove();
+        have.delete(k);
+      }
     }
-    for (const t of marks.tolls) {
-      const node = document.createElement("div");
-      node.className = `mark toll${t.rm != null ? " priced" : ""}`;
-      node.setAttribute("role", "img");
-      node.setAttribute("aria-label", t.rm != null ? `Toll plaza ${t.name}, about RM ${t.rm.toFixed(2)}` : `Toll plaza ${t.name}, price not available`);
-      node.innerHTML = `<svg ${markSvgAttrs} width="14" height="14"><path d="M3 20h18M6 20V9l6-5 6 5v11M10 20v-6h4v6"/></svg>${t.rm != null ? `<span>RM ${t.rm.toFixed(2)}</span>` : ""}`;
-      add(node, t.lat, t.lng);
+    for (const [k, w] of want) {
+      if (have.has(k)) continue;
+      have.set(k, new maplibregl.Marker({ element: w.make() }).setLngLat([w.lng, w.lat]).addTo(m));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [marks]);
+  }, [marks, navigating]);
 
   // ---- destination pin ------------------------------------------------------
   useEffect(() => {

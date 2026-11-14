@@ -21,6 +21,8 @@ interface Props {
   showRecenter: boolean;
   onRecenter: () => void;
   onStop: () => void;
+  /** Mapped traffic lights still ahead on this route; null when not known. */
+  lights: { nextM: number | null; left: number } | null;
 }
 
 /** Valhalla manoeuvre type -> a simple arrow. */
@@ -67,6 +69,18 @@ function icon(type: number): string {
 
 const CAMERA_KEY: Record<CameraAlert["camera"]["type"], Key> = { fixed: "nav.cam.fixed", "red-light": "nav.cam.red-light", "average-speed": "nav.cam.average-speed" };
 
+/** Small traffic light: dark housing with red, amber and green lamps. */
+export function TrafficLightIcon({ h = 22 }: { h?: number }) {
+  return (
+    <svg viewBox="0 0 16 26" width={(h * 16) / 26} height={h} aria-hidden="true" focusable="false">
+      <rect x="1" y="1" width="14" height="24" rx="5" fill="#1f2937" stroke="#fff" strokeWidth="1.6" />
+      <circle cx="8" cy="7" r="3" fill="#ef4444" />
+      <circle cx="8" cy="13" r="3" fill="#fbbf24" />
+      <circle cx="8" cy="19" r="3" fill="#22c55e" />
+    </svg>
+  );
+}
+
 export function NavHud(p: Props) {
   const { t } = useT();
   const { nav, maneuver } = p;
@@ -98,6 +112,20 @@ export function NavHud(p: Props) {
             </div>
           )}
         </div>
+
+        {p.lights && !arrived && (
+          <div className="status lights" role="status" aria-label={t("nav.light.aria")}>
+            <TrafficLightIcon />
+            {p.lights.nextM === null ? (
+              <span>{t("nav.light.none")}</span>
+            ) : (
+              <span>
+                <b>{t("nav.light.next", { d: formatDistance(Math.round(p.lights.nextM / 10) * 10) })}</b>
+                <small> · {t(`nav.light.left.${p.lights.left === 1 ? "one" : "other"}` as Key, { n: p.lights.left })}</small>
+              </span>
+            )}
+          </div>
+        )}
 
         {p.alert && (
           <div className="alert" role="alert">
