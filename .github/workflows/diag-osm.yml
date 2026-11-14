@@ -1,0 +1,20 @@
+name: Diagnostic - OSM AwAS data
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  diag:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install osmium
+      - run: curl -fL --retry 3 -o /tmp/my.osm.pbf https://download.geofabrik.de/asia/malaysia-singapore-brunei-latest.osm.pbf
+      - run: python3 scripts/diag-osm-awas.py /tmp/my.osm.pbf | tee /tmp/diag.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: diag
+          path: /tmp/diag.txt
