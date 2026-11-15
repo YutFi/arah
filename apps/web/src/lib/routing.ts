@@ -1,4 +1,4 @@
-import { parseValhallaTrip, routeOverlap, type LatLng, type Route, type ValhallaTrip } from "@arah/core";
+import { avoidAheadPolygon, parseValhallaTrip, routeOverlap, type LatLng, type Route, type ValhallaTrip } from "@arah/core";
 import { config } from "./config";
 import { t } from "./i18n";
 
@@ -10,6 +10,8 @@ export interface RouteRequest {
   alternates?: number;
   /** An area the route must not go through (a closed ring of points). */
   avoid?: LatLng[];
+  /** Extra Valhalla "auto" costing options for a differently-styled route (for example shortest). */
+  options?: Record<string, number | boolean>;
 }
 
 interface ValhallaResponse {
@@ -27,7 +29,7 @@ export async function fetchRoutes(req: RouteRequest, signal?: AbortSignal): Prom
     ],
     costing: "auto",
     // use_tolls: 0 = avoid tolls as much as possible, 0.5 = neutral (the default).
-    costing_options: { auto: { use_tolls: req.avoidTolls ? 0 : 0.5 } },
+    costing_options: { auto: { use_tolls: req.avoidTolls ? 0 : 0.5, ...(req.options ?? {}) } },
     alternates: req.alternates ?? 2,
     directions_options: { units: "kilometers", language: "en-US" },
     // Valhalla: "exclude_polygons" is a list of rings of [lon, lat] points.
@@ -55,6 +57,63 @@ export async function fetchRoutes(req: RouteRequest, signal?: AbortSignal): Prom
 
   const trips = [data.trip, ...(data.alternates ?? []).map((a) => a.trip)];
   return trips.map(parseValhallaTrip);
+}
+
+/** How many different routes the preview always tries to offer. */
+export const ROUTE_CHOICES = 3;
+
+/** Two routes are "the same road" when almost every point of each lies on the other. */
+function sameRoad(a: Route, b: Route): boolean {
+  const samples = Math.min(300, Math.max(16, Math.round(Math.min(a.lengthM, b.lengthM) / 250)));
+  return routeOverlap(a, b, 45, samples) > 0.95 && routeOverlap(b, a, 45, samples) > 0.95;
+}
+
+/**
+ * Up to three genuinely different routes, fastest first. The server often returns fewer
+ * than three alternatives, so when it does we ask in other styles (no tolls, shortest, no
+ * highways, toll roads preferred), and if that is still not enough we block a stretch of
+ * the fastest route to force a different road. Copies of one another are dropped.
+ * Returns fewer than three only when the map really has no more different roads.
+ */
+export async function fetchRouteChoices(
+  req: { from: LatLng; to: LatLng; avoidTolls: boolean },
+  signal?: AbortSignal,
+): Promise<Route[]> {
+  const have: Route[] = [];
+  const add = (rs: Route[]) => {
+    for (const r of rs) if (have.length < ROUTE_CHOICES && !have.some((h) => sameRoad(r, h))) have.push(r);
+  };
+  const ask = async (extra: Partial<RouteRequest>): Promise<Route[]> => {
+    try {
+      return await fetchRoutes({ from: req.from, to: req.to, avoidTolls: req.avoidTolls, alternates: 0, ...extra }, signal);
+    } catch (e) {
+      if ((e as Error).name === "AbortError") throw e;
+      return [];
+    }
+  };
+
+  // The first ask decides success or failure, with its own error message.
+  add(await fetchRoutes({ from: req.from, to: req.to, avoidTolls: req.avoidTolls, alternates: 2 }, signal));
+
+  if (have.length < ROUTE_CHOICES) {
+    const styles: Record<string, number | boolean>[] = [
+      ...(req.avoidTolls ? [] : [{ use_tolls: 0 }]),
+      { shortest: true },
+      { use_highways: 0 },
+      ...(req.avoidTolls ? [] : [{ use_tolls: 1 }]),
+    ];
+    const results = await Promise.all(styles.map((options) => ask({ options })));
+    for (const rs of results) add(rs);
+  }
+
+  const main = have[0];
+  if (main && main.lengthM > 1500) {
+    for (const frac of [0.5, 0.3, 0.7]) {
+      if (have.length >= ROUTE_CHOICES) break;
+      add(await ask({ avoid: avoidAheadPolygon(main, main.lengthM * frac - 500, 0, 1000, 60) }));
+    }
+  }
+  return have.sort((a, b) => a.durationS - b.durationS);
 }
 
 export type RerouteKind = "avoid" | "alt";

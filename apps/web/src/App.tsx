@@ -42,7 +42,7 @@ import { Splash } from "./components/Splash";
 import { LocationHelp, LocationPrimer } from "./components/LocationHelp";
 import { onLocationPermissionChange, queryLocationPermission } from "./lib/permission";
 import { useGeolocation } from "./lib/useGeolocation";
-import { fetchRerouteOptions, fetchRoutes, fetchTripTotals } from "./lib/routing";
+import { fetchRerouteOptions, fetchRouteChoices, fetchRoutes, fetchTripTotals } from "./lib/routing";
 import { AWAS_LOOKAHEAD_M, AWAS_MATCH, loadAwas, type AwasState } from "./lib/awasData";
 import { voice, wakeLock } from "./lib/device";
 import { reversePlace, type Place } from "./lib/geocode";
@@ -207,7 +207,7 @@ export default function App() {
     const ac = new AbortController();
     setLoading(true);
     setError(null);
-    fetchRoutes({ from: origin.pos, to: dest, avoidTolls }, ac.signal)
+    fetchRouteChoices({ from: origin.pos, to: dest, avoidTolls }, ac.signal)
       .then((rs) => {
         setRoutes(rs);
         setSel(0);

@@ -9,10 +9,12 @@
  *
  * What is covered: Class 1 (ordinary car) at OPEN-system plazas, where the
  * price is one flat amount per plaza.
- * What is NOT covered: CLOSED systems (PLUS North-South, ECE/LPT, Second Link
- * trunk, ...). Those charge by how far you drive between the plaza you enter
- * and the one you leave, so the price needs both ends. They are left out
- * on purpose rather than approximated.
+ * What is NOT covered exactly: CLOSED systems (PLUS North-South, ECE/LPT, Second
+ * Link trunk, ...). Those charge by how far you drive between the plaza you enter
+ * and the one you leave. Only ONE of them has a rate we can source: the
+ * North-South Expressway (PLUS), charged per kilometre (see NSE_RM_PER_KM). For that
+ * one the app gives an ESTIMATE (distance driven on it x the per-km rate) and says
+ * so. All other closed systems are left out rather than guessed.
  *
  * Rates change (they were also postponed several times). Treat as a guide and
  * confirm at the operator or at the Touch 'n Go / LLM toll calculator.
@@ -113,6 +115,19 @@ export function findTollRate(osmName: string): TollRate | null {
   return rest === "" ? hit : null;
 }
 
+/**
+ * North-South Expressway (PLUS), Class 1 car, RM per km driven.
+ * Source: the 18% cut from 13.6 to 11.15 sen/km from 1 Feb 2020, frozen to 2058
+ * (Bernama, 31 Jan 2020). PLUS says the fare is "cent/km x distance travelled",
+ * measured from its limit of maintenance responsibilities, not from the plazas
+ * (https://www.plus.com.my/FAQ.html). So distance on the road x this rate is close
+ * but NOT the same as the fare charged. Sanity check only: published fares such as
+ * Sungai Besi to Skudai RM33.21 work out to about 298 km at this rate, which is
+ * about the road distance. Checked on 2026-11-15.
+ */
+export const NSE_RM_PER_KM = 0.1115;
+export const NSE_RATE_SOURCE = "https://www.bernama.com/en/news.php?id=1810647";
+
 export interface TollEstimate {
   /** Sum of the plazas that have a price (RM). */
   totalRm: number;
@@ -134,4 +149,59 @@ export function estimateTolls(plazas: readonly { name: string }[]): TollEstimate
   }
   const totalRm = Math.round(priced.reduce((a, b) => a + b.rm, 0) * 100) / 100;
   return { totalRm, priced, unpriced, complete: plazas.length > 0 && unpriced.length === 0 };
+}
+
+/** Names OpenStreetMap uses for the North-South Expressway. */
+const NSE_NAME = /(^|\b)(lebuhraya utara.?selatan|north.?south expressway)(\b|$)|^e[12]$/i;
+
+export interface RouteTollEstimate extends TollEstimate {
+  /** Part of totalRm that comes from a published flat price (RM). */
+  exactRm: number;
+  /** Part of totalRm that is distance x rate on the North-South Expressway (RM, unrounded). */
+  estimatedRm: number;
+  /** Kilometres driven on the North-South Expressway, or 0. */
+  nseKm: number;
+}
+
+/**
+ * Toll for a whole route: flat prices for the open plazas we can price, plus a
+ * distance-based estimate for the PLUS North-South Expressway. Plazas on the
+ * expressway itself are covered by that estimate, so they are not "unpriced".
+ * Anything else we cannot price stays in `unpriced`; nothing is invented.
+ */
+export function estimateRouteToll(
+  route: { maneuvers: readonly { streetNames: readonly string[]; toll: boolean; distanceFromStartM: number; lengthM: number }[] },
+  plazas: readonly { name: string; distanceAlongM: number }[],
+): RouteTollEstimate {
+  const spans = route.maneuvers
+    .filter((m) => m.toll && m.streetNames.some((n) => NSE_NAME.test(n.trim())))
+    .map((m) => ({ from: m.distanceFromStartM, to: m.distanceFromStartM + m.lengthM }));
+  const nseM = spans.reduce((a, s) => a + (s.to - s.from), 0);
+  const MARGIN_M = 1500; // the entry and exit plazas sit on the ramps just outside the expressway section
+  const onNse = (d: number) => spans.some((s) => d >= s.from - MARGIN_M && d <= s.to + MARGIN_M);
+
+  const priced: TollEstimate["priced"] = [];
+  const unpriced: string[] = [];
+  for (const p of plazas) {
+    const r = findTollRate(p.name);
+    if (r) priced.push({ name: r.plaza, highway: r.highway, rm: r.rm });
+    else if (!onNse(p.distanceAlongM)) unpriced.push(p.name);
+  }
+  const exactRm = Math.round(priced.reduce((a, b) => a + b.rm, 0) * 100) / 100;
+  const nseKm = nseM / 1000;
+  const estimatedRm = nseKm * NSE_RM_PER_KM;
+  return {
+    totalRm: Math.round((exactRm + estimatedRm) * 100) / 100,
+    exactRm,
+    estimatedRm,
+    nseKm,
+    priced,
+    unpriced,
+    complete: unpriced.length === 0 && (plazas.length > 0 || nseKm > 0),
+  };
+}
+
+/** The shown amount for an estimate: rounded to 50 sen, because it is not exact. */
+export function roundEstimateRm(rm: number): number {
+  return Math.round(rm * 2) / 2;
 }

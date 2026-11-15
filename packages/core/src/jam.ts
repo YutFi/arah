@@ -149,8 +149,8 @@ export function avoidAheadPolygon(route: Route, alongM: number, startAheadM = 15
 }
 
 /** Share (0 to 1) of route `a` that runs within `withinM` of route `b`. Used to tell "same road" from a different road. */
-export function routeOverlap(a: Route, b: Route, withinM = 45): number {
-  const n = 16;
+export function routeOverlap(a: Route, b: Route, withinM = 45, samples = 16): number {
+  const n = Math.max(2, Math.round(samples));
   let near = 0;
   for (let i = 0; i < n; i++) {
     const p = pointAtDistance(a, (a.lengthM * i) / (n - 1)).point;

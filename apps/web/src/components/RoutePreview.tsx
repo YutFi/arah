@@ -1,4 +1,4 @@
-import { estimateTolls, formatArrival, TOLL_DATA_CHECKED_ON, formatDistance, type Route } from "@arah/core";
+import { estimateRouteToll, formatArrival, formatDistance, NSE_RM_PER_KM, roundEstimateRm, TOLL_DATA_CHECKED_ON, type Route } from "@arah/core";
 import { fmtDuration, tn, useT } from "../lib/i18n";
 import type { Place } from "../lib/geocode";
 import type { StatsState } from "../lib/routeStats";
@@ -35,6 +35,7 @@ export function RoutePreview(p: Props) {
   const { t } = useT();
   const now = new Date();
   const best = p.routes[0]?.durationS ?? 0;
+  const shortest = Math.min(...p.routes.map((r) => r.lengthM));
 
   return (
     <div className="sheet" style={{ paddingBottom: "max(16px, env(safe-area-inset-bottom))", maxHeight: "52dvh" }}>
@@ -69,6 +70,9 @@ export function RoutePreview(p: Props) {
 
       {p.loading && <div className="note">{t("route.finding")}</div>}
       {p.error && <div className="note error">{p.error}</div>}
+      {!p.loading && !p.error && p.routes.length > 0 && p.routes.length < 3 && (
+        <div className="note">{t("route.fewer", { n: p.routes.length })}</div>
+      )}
 
       <div className="route-list">
         {p.routes.map((r, i) => {
@@ -86,7 +90,10 @@ export function RoutePreview(p: Props) {
               </div>
               <div className="route-meta">
                 <span>{t("route.arrive", { t: formatArrival(now, r.durationS) })}</span>
-                {i === 0 ? <span className="tag">{t("route.recommended")}</span> : extra > 0 ? <span className="tag muted">{t("route.plus", { n: extra })}</span> : null}
+                {i === 0 ? <span className="tag">{t("route.recommended")}</span> : null}
+                {i > 0 && !r.hasToll && p.routes[0]?.hasToll ? <span className="tag green">{t("route.tag.noToll")}</span> : null}
+                {i > 0 && r.lengthM <= shortest + 1 && p.routes.length > 1 ? <span className="tag blue">{t("route.tag.shortest")}</span> : null}
+                {i > 0 && extra > 0 ? <span className="tag muted">{t("route.plus", { n: extra })}</span> : null}
               </div>
               <RouteFacts route={r} stats={p.stats} index={i} awas={p.awasCounts?.[i] ?? null} />
             </button>
@@ -94,7 +101,7 @@ export function RoutePreview(p: Props) {
         })}
       </div>
 
-      <RouteDetails stats={p.stats} index={p.selected} awas={p.awasCounts?.[p.selected] ?? 0} />
+      <RouteDetails route={p.routes[p.selected] as Route} stats={p.stats} index={p.selected} awas={p.awasCounts?.[p.selected] ?? 0} />
 
       <label className="toggle">
         <input type="checkbox" checked={p.avoidTolls} onChange={(e) => p.onToggleTolls(e.target.checked)} />
@@ -121,7 +128,9 @@ function RouteFacts({ route, stats, index, awas }: { route: Route; stats: StatsS
   const none = stats.status === "error" || (stats.status === "loaded" && !f);
   const { t } = useT();
   const tolls = f?.tolls ?? [];
-  const est = estimateTolls(tolls);
+  const est = estimateRouteToll(route, tolls);
+  const shown = est.estimatedRm > 0 ? roundEstimateRm(est.totalRm) : est.totalRm;
+  const rm = t(est.estimatedRm > 0 ? "route.rmEst" : "route.rmExact", { n: shown.toFixed(2) });
   return (
     <div className="facts">
       <span className="fact" title={t("route.legend.light")}>
@@ -133,14 +142,16 @@ function RouteFacts({ route, stats, index, awas }: { route: Route; stats: StatsS
         {f ? tn("route.cam", f.cameras.length) : wait ? t("route.countingCams") : none ? t("route.noCams") : ""}
         {awas != null && awas > 0 ? t("route.awas", { n: awas }) : ""}
       </span>
-      {(route.hasToll || tolls.length > 0) && (
+      {(route.hasToll || tolls.length > 0 || est.nseKm > 0) && (
         <span className="fact toll">
           <span aria-hidden>🛣️</span> {t("route.toll")}
-          {tolls.length === 0
-            ? t("route.tollNoCount")
-            : est.priced.length > 0
-              ? t("route.tollAbout", { rm: est.totalRm.toFixed(2) }) + (est.complete ? "" : t("route.tollUnpriced", { p: tn("route.plaza", est.unpriced.length) }))
-              : t("route.tollNoPrice", { p: tn("route.plaza", tolls.length) })}
+          {wait
+            ? t("route.tollCounting")
+            : est.priced.length > 0 || est.nseKm > 0
+              ? t("route.tollAbout", { rm }) + (est.unpriced.length === 0 ? "" : t("route.tollUnpriced", { p: tn("route.plaza", est.unpriced.length) }))
+              : tolls.length === 0
+                ? t("route.tollNoCount")
+                : t("route.tollNoPrice", { p: tn("route.plaza", tolls.length) })}
         </span>
       )}
     </div>
@@ -148,11 +159,13 @@ function RouteFacts({ route, stats, index, awas }: { route: Route; stats: StatsS
 }
 
 /** Legend for the map symbols, and the toll breakdown, for the chosen route. */
-function RouteDetails({ stats, index, awas }: { stats: StatsState; index: number; awas: number }) {
+function RouteDetails({ route, stats, index, awas }: { route: Route; stats: StatsState; index: number; awas: number }) {
   const { t } = useT();
   const f = stats.status === "loaded" ? stats.list[index] : null;
   if (!f) return null;
-  const est = estimateTolls(f.tolls);
+  const est = estimateRouteToll(route, f.tolls);
+  const shown = est.estimatedRm > 0 ? roundEstimateRm(est.totalRm) : est.totalRm;
+  const rm = t(est.estimatedRm > 0 ? "route.rmEst" : "route.rmExact", { n: shown.toFixed(2) });
   return (
     <>
       <div className="legend" aria-label={t("route.legend")}>
@@ -161,13 +174,19 @@ function RouteDetails({ stats, index, awas }: { stats: StatsState; index: number
         {awas > 0 && <span><i className="l-awas" />{t("route.legend.awas")}</span>}
         <span><i className="l-toll" />{t("route.legend.toll")}</span>
       </div>
-      {f.tolls.length > 0 && (
+      {(f.tolls.length > 0 || est.nseKm > 0) && (
         <details className="toll-box">
           <summary>
             <b>{t("route.tollBox")}</b>
-            {est.priced.length > 0 ? (est.complete ? t("route.tollTotal", { rm: est.totalRm.toFixed(2) }) : t("route.tollSoFar", { rm: est.totalRm.toFixed(2) })) : t("route.tollNone")}
+            {est.priced.length > 0 || est.nseKm > 0 ? (est.complete ? t("route.tollTotal", { rm }) : t("route.tollSoFar", { rm })) : t("route.tollNone")}
           </summary>
           <ul>
+            {est.nseKm > 0 && (
+              <li>
+                <span>{t("route.nse")} <span className="na">· {t("route.nseCalc", { km: est.nseKm.toFixed(0), sen: (NSE_RM_PER_KM * 100).toFixed(2) })}</span></span>
+                <span>≈ RM {roundEstimateRm(est.estimatedRm).toFixed(2)}</span>
+              </li>
+            )}
             {est.priced.map((x) => (
               <li key={x.name}>
                 <span>{x.name} <span className="na">· {x.highway}</span></span>
@@ -182,6 +201,7 @@ function RouteDetails({ stats, index, awas }: { stats: StatsState; index: number
             ))}
           </ul>
           <div className="why">{t("route.tollWhy", { d: TOLL_DATA_CHECKED_ON })}</div>
+          {est.nseKm > 0 && <div className="why">{t("route.nseWhy")}</div>}
         </details>
       )}
     </>

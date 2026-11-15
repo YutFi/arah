@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
   addStop,
+  estimateRouteToll,
+  NSE_RM_PER_KM,
+  roundEstimateRm,
   angleDiff,
   MAX_TRIP_STOPS,
   moveStop,
@@ -214,6 +217,50 @@ describe("AWAS data gate", () => {
   it("accepts an approximate flag only as a boolean", () => {
     expect(validateCamera({ ...good, approximate: true })).toEqual([]);
     expect(validateCamera({ ...good, approximate: "yes" as unknown as boolean }).length).toBeGreaterThan(0);
+  });
+});
+
+describe("estimateRouteToll (flat prices + North-South Expressway estimate)", () => {
+  const man = (name: string, toll: boolean, from: number, len: number) => ({ streetNames: [name], toll, distanceFromStartM: from, lengthM: len });
+  const route = {
+    maneuvers: [
+      man("Jalan Duta", true, 0, 2000),
+      man("Lebuhraya Utara-Selatan", true, 2000, 100_000),
+      man("Jalan Keluar", false, 102_000, 1000),
+    ],
+  };
+  it("prices the expressway part by kilometres driven times the per-km rate", () => {
+    const e = estimateRouteToll(route, []);
+    expect(e.nseKm).toBeCloseTo(100, 6);
+    expect(e.estimatedRm).toBeCloseTo(100 * NSE_RM_PER_KM, 6);
+    expect(e.exactRm).toBe(0);
+    expect(roundEstimateRm(e.totalRm)).toBe(11);
+  });
+  it("adds exact flat prices on top and lists what it cannot price", () => {
+    const e = estimateRouteToll(route, [
+      { name: "Gombak", distanceAlongM: 500 },
+      { name: "Plaza Tol Entah Mana", distanceAlongM: 150_000 },
+    ]);
+    expect(e.exactRm).toBe(6);
+    expect(e.unpriced).toEqual(["Plaza Tol Entah Mana"]);
+    expect(e.totalRm).toBeCloseTo(6 + 11.15, 2);
+    expect(e.complete).toBe(false);
+  });
+  it("does not call the expressway's own plazas unpriced (the estimate covers them)", () => {
+    const e = estimateRouteToll(route, [
+      { name: "Jalan Duta", distanceAlongM: 1200 },
+      { name: "Setiawan", distanceAlongM: 102_900 },
+    ]);
+    expect(e.unpriced).toEqual([]);
+    expect(e.complete).toBe(true);
+  });
+  it("ignores expressway-named roads that are not toll sections, and other toll roads", () => {
+    const e = estimateRouteToll({ maneuvers: [man("Lebuhraya Utara-Selatan", false, 0, 50_000), man("Lebuhraya Elite", true, 50_000, 20_000)] }, []);
+    expect(e.nseKm).toBe(0);
+    expect(e.totalRm).toBe(0);
+  });
+  it("reads the E1 and E2 road numbers too", () => {
+    expect(estimateRouteToll({ maneuvers: [man("E2", true, 0, 10_000)] }, []).nseKm).toBeCloseTo(10, 6);
   });
 });
 

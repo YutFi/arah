@@ -77,6 +77,8 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .route-meta { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; font-size: 14px; color: var(--muted); margin-top: 3px; }
 .tag { background: #e6f4ea; color: #1b6b36; border-radius: 6px; padding: 2px 7px; font-size: 12.5px; font-weight: 600; }
 .tag.muted { background: #eef2f9; color: var(--muted); }
+.tag.green { background: #e6f4ea; color: #1b6b36; }
+.tag.blue { background: #e8f0fe; color: #1a56b3; }
 .tag.toll { background: var(--warn-bg); color: var(--warn); }
 .toggle { display: flex; gap: 10px; align-items: center; margin-top: 12px; font-size: 15px; }
 .toggle input { width: 20px; height: 20px; }
