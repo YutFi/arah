@@ -9,7 +9,8 @@ WORK=$(mktemp -d)
 SRC=${1:-}
 if [ -z "$SRC" ]; then
   SRC="$WORK/malaysia.osm.pbf"
-  curl -fL --retry 3 --retry-delay 5 -o "$SRC" https://download.geofabrik.de/asia/malaysia-singapore-brunei-latest.osm.pbf
+  # --retry-connrefused / --retry-all-errors: Geofabrik sometimes refuses a connection for a moment.
+  curl -fL --retry 8 --retry-delay 15 --retry-connrefused --retry-all-errors -o "$SRC" https://download.geofabrik.de/asia/malaysia-singapore-brunei-latest.osm.pbf
 fi
 npx tsx scripts/export-osm-rules.ts "$WORK/rules.json"
 python3 scripts/extract-osm.py "$SRC" "$WORK/rules.json" "$WORK/elements.ndjson"

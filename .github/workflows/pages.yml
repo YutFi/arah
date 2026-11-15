@@ -30,11 +30,31 @@ jobs:
       # Pre-builds petrol, food, traffic-light, camera and toll-plaza data from OpenStreetMap so the
       # phone loads it instantly. If this step fails the app still works, but falls back to a slow
       # public server (see docs/DEPLOYMENT.md).
+      # Keep the last good copy of the data. If the OpenStreetMap download is down on deploy day,
+      # the site ships with that copy instead of silently losing traffic lights and cameras.
+      - name: Restore last good map data
+        uses: actions/cache/restore@v4
+        with:
+          path: apps/web/public/data/osm
+          key: osm-data-none
+          restore-keys: osm-data-
       - name: Build map data
+        id: osmdata
         continue-on-error: true
         run: |
           pip install osmium
           bash scripts/build-osm-data.sh
+      - name: Save map data as the last good copy
+        if: steps.osmdata.outcome == 'success'
+        uses: actions/cache/save@v4
+        with:
+          path: apps/web/public/data/osm
+          key: osm-data-${{ github.run_id }}
+      # Never ship a build with no map data at all: the app would show no lights or cameras.
+      - name: Check map data is present
+        run: |
+          test -s apps/web/public/data/osm/manifest.json || { echo "::error::No map data: the OpenStreetMap download failed and there is no earlier copy. Re-run this workflow."; exit 1; }
+          echo "Map data from: ${{ steps.osmdata.outcome == 'success' && 'a fresh download' || 'the last good copy' }}"
       - run: npm run build
         env:
           VITE_BASE: /${{ github.event.repository.name }}/

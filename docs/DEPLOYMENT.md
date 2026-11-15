@@ -36,6 +36,7 @@ Live public map-data servers are slow and sometimes busy, so the app does **not*
 - The app loads only the few tiles around where you are looking, so Petrol, nearby places and the traffic-light / camera / toll-plaza counts on a route appear in a fraction of a second.
 - The workflow runs on every push and **every Monday**, so the data stays fresh. The About screen shows the snapshot date.
 - If the "Build map data" step fails, the deploy still works and the app falls back to the slow live Overpass servers (with a timeout and a visible message). Check the Actions tab for the step's log.
+- The deploy keeps the last good copy of these tiles (GitHub Actions cache) and refuses to publish with no map data at all. If the Geofabrik download is down, the site ships with the previous copy. On 2026-11-15 one deploy shipped without the data because the download failed and the step was allowed to fail silently, so the app lost its traffic lights and cameras until the next good deploy.
 - To try it locally: `pip install osmium`, then `bash scripts/build-osm-data.sh` (downloads about 250 MB) or `bash scripts/build-osm-data.sh scripts/fixtures/sample.osm` for a tiny sample.
 
 The data is OpenStreetMap volunteer data: it can be incomplete or out of date, and it has no ratings or toll prices.
