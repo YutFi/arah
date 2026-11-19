@@ -1,4 +1,4 @@
-import { formatArrival, formatDistance, mpsToKph, type CameraAlert, type LaneStatus, type Maneuver, type NavUpdate } from "@arah/core";
+import { formatArrival, formatDistance, mpsToKph, type CameraAlert, type LaneStatus, type Maneuver, type NavUpdate, type TollPaymentSummary } from "@arah/core";
 import { fmtDuration, maneuverText, useT, type Key } from "../lib/i18n";
 import { FlagIcon, ForkIcon, LaneIcon, LocateIcon, ManeuverIcon, SpeakerIcon } from "./icons";
 
@@ -31,6 +31,8 @@ interface Props {
   onStop: () => void;
   /** Mapped traffic lights still ahead on this route; null when not known. */
   lights: { nextM: number | null; left: number } | null;
+  /** Next toll plaza within 3 km: what OpenStreetMap says about its booths (pay null = nothing tagged). */
+  toll: { name: string; distM: number; pay: TollPaymentSummary | null } | null;
   /** Multi-stop trip: which stop this is. Null on an ordinary trip. */
   tripPill: { i: number; n: number; name: string } | null;
   onTrip: () => void;
@@ -54,6 +56,7 @@ export function NavHud(p: Props) {
   const { t } = useT();
   const { nav, maneuver } = p;
   const arrived = nav?.status === "arrived";
+  const booths = (n: number) => (n === 1 ? t("nav.toll.booth1") : t("nav.toll.booths", { n }));
   const kph = p.simulating ? p.simSpeedKph : p.speedMps != null ? mpsToKph(p.speedMps) : null;
 
   return (
@@ -77,7 +80,7 @@ export function NavHud(p: Props) {
             </>
           ) : maneuver ? (
             <>
-              <div className="banner-icon" aria-hidden><ManeuverIcon type={maneuver.type} size={44} /></div>
+              <div className="banner-icon" key={maneuver.beginShapeIndex} aria-hidden><ManeuverIcon type={maneuver.type} size={44} /></div>
               <div className="banner-text">
                 <div className="banner-dist">{nav?.distanceToNextM != null ? formatDistance(nav.distanceToNextM) : ""}</div>
                 <div className="banner-instr">{maneuverText(maneuver)}</div>
@@ -105,6 +108,27 @@ export function NavHud(p: Props) {
                 <b>{t("nav.light.next", { d: formatDistance(Math.round(p.lights.nextM / 10) * 10) })}</b>
                 <small> · {t(`nav.light.left.${p.lights.left === 1 ? "one" : "other"}` as Key, { n: p.lights.left })}</small>
               </span>
+            )}
+          </div>
+        )}
+
+        {p.toll && !arrived && (
+          <div className="status toll-pill" role="status">
+            <div className="toll-head">
+              <b>{t("nav.toll.ahead")}</b>
+              <span>{p.toll.name ? `${p.toll.name} · ` : ""}{formatDistance(Math.round(p.toll.distM / 10) * 10)}</span>
+            </div>
+            {p.toll.pay ? (
+              <>
+                <div className="toll-methods" aria-label={t("nav.toll.tagged")}>
+                  {p.toll.pay.tng > 0 && <span className="pay tng">{t("nav.toll.tng")} <i>{booths(p.toll.pay.tng)}</i></span>}
+                  {p.toll.pay.smarttag > 0 && <span className="pay smart">{t("nav.toll.smarttag")} <i>{booths(p.toll.pay.smarttag)}</i></span>}
+                  {p.toll.pay.rfid > 0 && <span className="pay rfid">{t("nav.toll.rfid")} <i>{booths(p.toll.pay.rfid)}</i></span>}
+                </div>
+                <small>{t("nav.toll.tagged")}. {t("nav.toll.partial")}</small>
+              </>
+            ) : (
+              <small>{t("nav.toll.none")}</small>
             )}
           </div>
         )}

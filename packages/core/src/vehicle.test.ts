@@ -142,3 +142,56 @@ describe("motorcycle lanes", () => {
     expect(motorcycleOrder([a, b, c]).map((r) => r.id)).toEqual(["b", "c", "a"]);
   });
 });
+
+import { hasPaymentInfo, headsUpDistanceM, isForkManeuver, readTollBooths, spokenKm, summarizeBooths, tollBoothQuery, parseOverpass, buildOverpassQuery } from "./index";
+
+describe("early guidance", () => {
+  it("flags exits, ramps, forks and merges only", () => {
+    for (const t of [17, 18, 19, 20, 21, 22, 23, 24, 25, 37, 38]) expect(isForkManeuver(t)).toBe(true);
+    for (const t of [0, 1, 4, 9, 10, 15, 26, 27]) expect(isForkManeuver(t)).toBe(false);
+  });
+  it("warns about 45 s ahead, within 900 m and 2 km", () => {
+    expect(headsUpDistanceM(0)).toBe(900);
+    expect(headsUpDistanceM(25)).toBe(1125);
+    expect(headsUpDistanceM(60)).toBe(2000);
+    expect(headsUpDistanceM(Number.NaN)).toBe(900);
+  });
+  it("speaks kilometres with one decimal", () => {
+    expect(spokenKm(1480)).toBe("1.5");
+    expect(spokenKm(2000)).toBe("2");
+  });
+});
+
+describe("toll payment tags", () => {
+  it("builds a bounded Overpass question", () => {
+    const q = tollBoothQuery({ lat: 3.2, lng: 101.7 }, 99999);
+    expect(q).toContain('nwr["barrier"="toll_booth"](around:600,3.20000,101.70000)');
+    expect(() => tollBoothQuery({ lat: Number.NaN, lng: 1 })).toThrow();
+  });
+  it("reads the payment tags and counts only what is tagged", () => {
+    const json = {
+      elements: [
+        { type: "node", id: 1, lat: 3.2, lon: 101.7, tags: { barrier: "toll_booth", ref: "1", "payment:touchngo": "yes", "payment:touchngo_rfid": "yes" } },
+        { type: "node", id: 2, lat: 3.2, lon: 101.7001, tags: { barrier: "toll_booth", "payment:touchngo_smarttag": "yes" } },
+        { type: "node", id: 3, lat: 3.2, lon: 101.7002, tags: { barrier: "toll_booth" } },
+        { type: "node", id: 4, tags: { barrier: "toll_booth" } },
+      ],
+    };
+    const booths = readTollBooths(json);
+    expect(booths).toHaveLength(3);
+    const s = summarizeBooths(booths);
+    expect(s).toEqual({ booths: 3, tagged: 2, tng: 1, smarttag: 1, rfid: 1 });
+    expect(hasPaymentInfo(s)).toBe(true);
+    expect(hasPaymentInfo(summarizeBooths([booths[2]!]))).toBe(false);
+    expect(readTollBooths(null)).toEqual([]);
+  });
+});
+
+describe("rain shelters", () => {
+  it("asks for shelters and names unnamed ones by their kind", () => {
+    expect(buildOverpassQuery({ lat: 3.1, lng: 101.6 }, 1500, ["shelter"])).toContain('"amenity"~"^(shelter)$"');
+    const pois = parseOverpass({ elements: [{ type: "node", id: 9, lat: 3.1, lon: 101.6, tags: { amenity: "shelter" } }] });
+    expect(pois).toHaveLength(1);
+    expect(pois[0]).toMatchObject({ category: "shelter", name: "Shelter" });
+  });
+});

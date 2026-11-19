@@ -342,3 +342,109 @@ button.toast { text-align: left; border-top: 0; border-right: 0; border-bottom: 
   button, a.chip-btn, a.btn { transition: none !important; }
   .splash { transition: opacity .2s !important; }
 }
+
+/* =====================================================================
+   Motion. Springy, short, and never in the way of the road ahead.
+   ===================================================================== */
+:root { --spring: cubic-bezier(.34, 1.56, .64, 1); --out: cubic-bezier(.16, 1, .3, 1); }
+
+@keyframes chipIn { from { opacity: 0; transform: translateY(10px) scale(.92); } to { opacity: 1; transform: none; } }
+@keyframes rowIn { from { opacity: 0; transform: translateX(-10px); } to { opacity: 1; transform: none; } }
+@keyframes cardIn { from { opacity: 0; transform: translateY(14px) scale(.97); } to { opacity: 1; transform: none; } }
+@keyframes numPop { 0% { transform: translateY(8px) scale(.9); opacity: 0; } 60% { transform: translateY(-1px) scale(1.04); opacity: 1; } 100% { transform: none; } }
+@keyframes iconPop { 0% { transform: scale(.55) rotate(-12deg); opacity: 0; } 70% { transform: scale(1.1) rotate(2deg); opacity: 1; } 100% { transform: none; } }
+@keyframes shine { 0% { background-position: 160% 0; } 55%, 100% { background-position: -60% 0; } }
+@keyframes glowPulse { 0%, 100% { box-shadow: 0 0 0 3px var(--lane), var(--shadow-2); } 50% { box-shadow: 0 0 0 6px rgba(246, 184, 0, .45), var(--shadow-2); } }
+@keyframes markerDrop { 0% { transform: translateY(-22px) scale(.4); opacity: 0; } 65% { transform: translateY(2px) scale(1.08); opacity: 1; } 100% { transform: none; } }
+@keyframes breathe { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.035); } }
+@keyframes dashRun { to { background-position: 28px 0; } }
+
+/* sheets and cards rise with a little overshoot */
+.sheet, .modal-card { animation: sheetUp .38s var(--spring) both; }
+.modal { backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px); }
+.route-card { animation: cardIn .45s var(--spring) backwards; animation-delay: calc(var(--i, 0) * 70ms + 60ms); transition: transform .25s var(--spring), box-shadow .25s, border-color .2s, background-color .2s; }
+.route-card.selected { transform: translateY(-2px); }
+.route-card::before { transition: background-color .25s, width .25s var(--spring); }
+.route-card.selected::before { width: 8px; }
+.route-time { display: inline-block; animation: numPop .4s var(--spring) both; }
+
+/* search bar: lifts and glows when you tap it, icon turns, results cascade in */
+.search-box { transition: transform .3s var(--spring), box-shadow .25s, border-color .2s; }
+.search-box:focus-within { transform: translateY(-1px) scale(1.012); animation: glowPulse 2.2s ease-in-out infinite; }
+.search-icon { transition: transform .45s var(--spring), color .2s; }
+.search-box:focus-within .search-icon { transform: rotate(-90deg) scale(1.12); }
+.lang-btn { transition: transform .2s var(--spring), background-color .2s; }
+.lang-btn:active { transform: rotate(-6deg) scale(.92); }
+.result { animation: rowIn .32s var(--out) backwards; animation-delay: calc(var(--i, 0) * 45ms); transition: background-color .15s, transform .15s var(--spring), padding-left .2s var(--out); }
+.result:active { transform: scale(.985); padding-left: 16px; }
+.results { transform-origin: top center; animation: dropIn .28s var(--spring) both; }
+
+/* category chips: staggered entrance, press squish, selected pops */
+.cat { animation: chipIn .5s var(--spring) backwards; animation-delay: calc(var(--i, 0) * 45ms + 200ms); transition: transform .2s var(--spring), background-color .2s, color .2s, border-color .2s, box-shadow .2s; }
+.cat:active { transform: scale(.93); }
+.cat.on { transform: translateY(-1px); box-shadow: 0 0 0 2px var(--lane), var(--shadow-1); }
+.cat .cat-dot { transition: transform .35s var(--spring), background-color .2s; }
+.cat.on .cat-dot { transform: rotate(-10deg) scale(1.12); }
+.chips .chip { animation: chipIn .45s var(--spring) both .5s; }
+
+/* buttons: lane-yellow ones carry a slow shine, all of them spring back */
+.btn { transition: transform .18s var(--spring), box-shadow .2s, background-color .2s, opacity .2s; }
+.btn.primary:not(:disabled) { background-image: linear-gradient(105deg, transparent 38%, rgba(255, 255, 255, .55) 50%, transparent 62%); background-size: 250% 100%; background-position: 160% 0; background-repeat: no-repeat; animation: shine 3.8s ease-in-out 1.2s infinite; }
+.btn.primary:active:not(:disabled) { transform: translateY(2px) scale(.97); }
+.round { transition: transform .22s var(--spring), background-color .15s, box-shadow .2s; }
+.round:active { transform: scale(.88); }
+.round svg { transition: transform .4s var(--spring); }
+.round:active svg { transform: rotate(35deg); }
+.icon-btn { transition: transform .2s var(--spring), background-color .15s; }
+.icon-btn:active { transform: scale(.85); }
+.chip-btn { transition: transform .2s var(--spring), background-color .2s, border-color .2s; }
+.chip-btn:active { transform: scale(.94); }
+
+/* vehicle picker: one dark thumb slides between the three options */
+.veh-seg { position: relative; }
+.veh-seg::before { content: ""; position: absolute; top: 3px; bottom: 3px; left: 3px; width: calc((100% - 6px) / 3); border-radius: 7px; background: var(--asphalt); box-shadow: var(--shadow-1); transform: translateX(calc(var(--i, 0) * 100%)); transition: transform .42s var(--spring); }
+.veh-opt { position: relative; z-index: 1; transition: color .25s; }
+.veh-opt.on { background: transparent; box-shadow: none; }
+.veh-opt svg { transition: transform .4s var(--spring); }
+.veh-opt.on svg { transform: scale(1.18) rotate(-6deg); }
+.veh-truck { animation: cardIn .4s var(--spring) both; }
+.veh-axle { transition: transform .2s var(--spring), background-color .2s, color .2s; }
+.veh-axle:active { transform: scale(.9); }
+
+/* driving: turn icon pops on every new manoeuvre, pills slide in */
+.banner-icon { animation: iconPop .5s var(--spring) both; }
+.banner-dist { transition: color .2s; }
+.status { animation: rowIn .35s var(--out) both; }
+.status.lights svg { animation: breathe 2.4s ease-in-out infinite; }
+.speed { transition: transform .25s var(--spring); }
+.speed:active { transform: scale(.94); }
+.hud-side .round { animation: chipIn .5s var(--spring) backwards; }
+.hud-side .round:nth-child(2) { animation-delay: .08s; }
+.hud-side .round:nth-child(3) { animation-delay: .16s; }
+.bar { animation: sheetUp .45s var(--spring) both; }
+.alert { animation: iconPop .4s var(--spring) both; }
+
+/* toll plaza pill: which booths take which payment */
+.status.toll-pill { flex-direction: column; align-items: flex-start; gap: 6px; background: var(--paper); padding: 9px 12px; max-width: 100%; border-left: 4px solid #6d4aa8; }
+.toll-head { display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; }
+.toll-head span { font-family: var(--num); font-size: 18px; font-weight: 700; }
+.toll-methods { display: flex; gap: 6px; flex-wrap: wrap; }
+.toll-methods .pay { display: inline-flex; gap: 5px; align-items: baseline; padding: 3px 8px; border-radius: 6px; font-weight: 700; font-size: 13.5px; color: #fff; animation: chipIn .4s var(--spring) both; }
+.toll-methods .pay i { font-style: normal; font-weight: 500; opacity: .85; font-size: 12px; }
+.toll-methods .pay.tng { background: #d9731a; }
+.toll-methods .pay.smart { background: #a47b00; }
+.toll-methods .pay.rfid { background: #1f6fd1; }
+.toll-pill small { color: var(--muted); font-size: 12.5px; line-height: 1.35; }
+
+/* map markers and the locate arrow */
+.poi-marker { animation: markerDrop .5s var(--spring) backwards; }
+.stop-pin { animation: markerDrop .5s var(--spring) both; }
+.mark { animation: chipIn .4s var(--spring) both; }
+.toast { animation: sheetUp .4s var(--spring) both; }
+
+/* loading routes: a moving dashed line */
+.skeleton { position: relative; overflow: hidden; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .001ms !important; animation-delay: 0s !important; animation-iteration-count: 1 !important; transition-duration: .001ms !important; }
+}

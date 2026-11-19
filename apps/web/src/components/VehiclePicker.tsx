@@ -42,7 +42,7 @@ export function VehiclePicker({ vehicle, onChange }: Props) {
 
   return (
     <div className="veh">
-      <div className="veh-seg" role="radiogroup" aria-label={t("veh.aria")}>
+      <div className="veh-seg" role="radiogroup" aria-label={t("veh.aria")} style={{ ["--i" as string]: Math.max(0, TYPES.findIndex((x) => x.id === vehicle.type)) }}>
         {TYPES.map(({ id, icon: Icon, label }) => (
           <button
             key={id}

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { fetchTollPayment } from "./lib/tollLanes";
 import {
   addStop,
   avoidAheadPolygon,
@@ -18,6 +19,11 @@ import {
   removeStop,
   sameSpot,
   signalsAhead,
+  headsUpDistanceM,
+  hasPaymentInfo,
+  isForkManeuver,
+  spokenKm,
+  type TollPaymentSummary,
   typicalSpeedKph,
   upcomingCameras,
   type CategoryId,
@@ -738,13 +744,21 @@ export default function App() {
     const d = nav.distanceToNextM ?? Infinity;
     const near = Math.min(250, Math.max(100, ((live?.speedMps ?? 0) || 0) * 7));
     const text = lang === "ms" ? maneuverText(m) : (m.verbalPre ?? m.instruction);
+    const lower = `${text.charAt(0).toLowerCase()}${text.slice(1)}`;
+    // Exits, ramps, forks and merges get a first warning early, so there is time to change lane.
+    const early = headsUpDistanceM(live?.speedMps ?? 0);
+    if (isForkManeuver(m.type) && m.lengthM > 0 && d <= early && d > 650 && !said.has(`${idx}:early`) && !said.has(`${idx}:far`)) {
+      said.add(`${idx}:early`);
+      voice.speak(t("voice.inKm", { n: spokenKm(d), text: lower }));
+      return;
+    }
     if (d <= near && !said.has(`${idx}:near`)) {
       said.add(`${idx}:near`);
       said.add(`${idx}:far`);
       voice.speak(text);
     } else if (d <= 600 && d > near && !said.has(`${idx}:far`)) {
       said.add(`${idx}:far`);
-      voice.speak(t("voice.in", { n: Math.max(100, Math.round(d / 100) * 100), text: `${text.charAt(0).toLowerCase()}${text.slice(1)}` }));
+      voice.speak(t("voice.in", { n: Math.max(100, Math.round(d / 100) * 100), text: lower }));
     }
   }, [nav, route, phase, alert, live?.speedMps, lang, t, trip, tripRun, stopIdx]);
 
@@ -821,6 +835,26 @@ export default function App() {
     () => (phase === "navigating" && navFeatures && nav && nav.status !== "arrived" ? signalsAhead(navFeatures.signals, nav.distanceAlongM) : null),
     [phase, navFeatures, nav],
   );
+  // ---- next toll plaza (car and truck only; a motorcycle pays no toll) -------
+  const nextToll = useMemo(() => {
+    if (phase !== "navigating" || !navFeatures || !nav || nav.status === "arrived" || routeVehicle.type === "motorcycle") return null;
+    const t = navFeatures.tolls.find((x) => x.distanceAlongM - nav.distanceAlongM > -30 && x.distanceAlongM - nav.distanceAlongM <= 3000);
+    return t ? { name: t.name, lat: t.lat, lng: t.lng, distM: Math.max(0, t.distanceAlongM - nav.distanceAlongM) } : null;
+  }, [phase, navFeatures, nav, routeVehicle.type]);
+  const tollKey = nextToll ? `${nextToll.lat.toFixed(3)},${nextToll.lng.toFixed(3)}` : null;
+  const [tollPay, setTollPay] = useState<{ key: string; pay: TollPaymentSummary | null } | null>(null);
+  useEffect(() => {
+    if (!tollKey) return;
+    const [lat, lng] = tollKey.split(",").map(Number) as [number, number];
+    const ac = new AbortController();
+    void fetchTollPayment({ lat, lng }, ac.signal).then((pay) => {
+      if (!ac.signal.aborted) setTollPay({ key: tollKey, pay });
+    });
+    return () => ac.abort();
+  }, [tollKey]);
+  const tollInfo = nextToll
+    ? { name: nextToll.name, distM: nextToll.distM, pay: tollPay && tollPay.key === tollKey && tollPay.pay && hasPaymentInfo(tollPay.pay) ? tollPay.pay : null }
+    : null;
   const placeDistance = selPlace && nearbyFrom !== null && geo.fix ? haversine(geo.fix, selPlace) : null;
 
   const mapStops = useMemo(
@@ -976,6 +1010,7 @@ export default function App() {
           onRecenter={() => setFollow(true)}
           onStop={stopNavigation}
           lights={lightsInfo}
+          toll={tollInfo}
           tripPill={tripRun && trip[stopIdx] ? { i: stopIdx + 1, n: trip.length, name: trip[stopIdx]!.name } : null}
           onTrip={() => setTripOpen(true)}
         />

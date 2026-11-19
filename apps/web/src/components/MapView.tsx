@@ -155,6 +155,14 @@ export const MapView = forwardRef<MapHandle, Props>(function MapView(
         paint: { "line-color": "#7d8580", "line-width": 6, "line-opacity": 0.85 },
       });
       m.addLayer({
+        id: "routes-glow",
+        type: "line",
+        source: "routes",
+        filter: ["==", ["get", "sel"], 1],
+        layout: { "line-cap": "round", "line-join": "round" },
+        paint: { "line-color": "#f6b800", "line-width": 22, "line-opacity": 0.28, "line-blur": 12 },
+      });
+      m.addLayer({
         id: "routes-casing",
         type: "line",
         source: "routes",

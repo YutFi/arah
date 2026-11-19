@@ -10,6 +10,8 @@ import { config } from "./config";
 import { staticNearby } from "./osmData";
 import { t } from "./i18n";
 
+/** Kinds the pre-built map snapshot does not carry. */
+const LIVE_ONLY: readonly CategoryId[] = ["shelter"];
 const TTL_MS = 10 * 60 * 1000;
 const cache = new Map<string, { at: number; pois: Poi[] }>();
 
@@ -72,13 +74,16 @@ export async function fetchNearby(
   signal: AbortSignal,
 ): Promise<Partial<Record<CategoryId, Poi[]>>> {
   const c = snap(center);
-  const fast = await staticNearby(c, DEFAULT_RADIUS_M, ids, signal);
-  if (fast) return fast;
+  // Some kinds are not in the pre-built snapshot (rain shelters): those always go to a live server.
+  const inSnapshot = ids.filter((id) => !LIVE_ONLY.includes(id));
+  const liveIds = ids.filter((id) => LIVE_ONLY.includes(id));
+  const fast = inSnapshot.length ? await staticNearby(c, DEFAULT_RADIUS_M, inSnapshot, signal) : {};
+  if (fast && liveIds.length === 0) return fast;
 
   const now = Date.now();
-  const out: Partial<Record<CategoryId, Poi[]>> = {};
+  const out: Partial<Record<CategoryId, Poi[]>> = { ...(fast ?? {}) };
   const missing: CategoryId[] = [];
-  for (const id of ids) {
+  for (const id of fast ? liveIds : ids) {
     const hit = cache.get(key(id, c));
     if (hit && now - hit.at < TTL_MS) out[id] = hit.pois;
     else missing.push(id);

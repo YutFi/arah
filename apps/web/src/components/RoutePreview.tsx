@@ -106,12 +106,13 @@ export function RoutePreview(p: Props) {
           return (
             <button
               key={i}
+              style={{ ["--i" as string]: i }}
               className={`route-card${i === p.selected ? " selected" : ""}`}
               onClick={() => p.onSelect(i)}
               aria-pressed={i === p.selected}
             >
               <div className="route-main">
-                <span className="route-time">{fmtDuration(r.durationS)}</span>
+                <span className="route-time" key={`${p.vehicle.type}:${Math.round(r.durationS)}`}>{fmtDuration(r.durationS)}</span>
                 <span className="route-dist">{formatDistance(r.lengthM)}</span>
               </div>
               <div className="route-meta">

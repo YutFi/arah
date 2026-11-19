@@ -177,8 +177,8 @@ export function SearchPanel({ near, onPick, onAbout, active, onToggleCategory, o
           {!coord && !busy && !error && typed && results.length === 0 && (
             <li className="result-note">{notFound ? t("search.notFound") : t("search.noExact")}</li>
           )}
-          {results.map((p) => (
-            <li key={p.id}>
+          {results.map((p, i) => (
+            <li key={p.id} style={{ ["--i" as string]: i }}>
               <button className="result" onMouseDown={(e) => e.preventDefault()} onClick={() => choose(p)}>
                 <span className="result-name">
                   {p.name}
@@ -192,7 +192,7 @@ export function SearchPanel({ near, onPick, onAbout, active, onToggleCategory, o
       )}
 
       <div className="cats" role="group" aria-label={t("search.showNearby")}>
-        {CATEGORIES.map((c) => {
+        {CATEGORIES.map((c, i) => {
           const on = active.includes(c.id);
           return (
             <button
@@ -200,7 +200,7 @@ export function SearchPanel({ near, onPick, onAbout, active, onToggleCategory, o
               className={`cat${on ? " on" : ""}`}
               aria-pressed={on}
               onClick={() => onToggleCategory(c.id)}
-              style={{ ["--cat" as string]: CATEGORY_UI[c.id].color }}
+              style={{ ["--cat" as string]: CATEGORY_UI[c.id].color, ["--i" as string]: i }}
             >
               <span className="cat-dot"><CatIcon id={c.id} size={15} /></span>
               {catLabel(c.id)}

@@ -82,6 +82,7 @@ const en = {
   "cat.money": "ATM & bank",
   "cat.shop": "Shops",
   "cat.parking": "Parking",
+  "cat.shelter": "Rain shelter",
 
   // nearby sheet
   "nearby.you": "Near you",
@@ -196,6 +197,15 @@ const en = {
   "nav.light.left.one": "{n} light left",
   "nav.light.left.other": "{n} lights left",
   "nav.light.none": "No more mapped lights",
+  "nav.toll.ahead": "Toll plaza ahead",
+  "nav.toll.tagged": "Tagged on OpenStreetMap",
+  "nav.toll.tng": "TnG card",
+  "nav.toll.smarttag": "SmartTAG",
+  "nav.toll.rfid": "RFID",
+  "nav.toll.booths": "{n} booths",
+  "nav.toll.booth1": "1 booth",
+  "nav.toll.none": "Lane types are not mapped for this plaza. Read the overhead signs: RFID is sometimes fitted in existing lanes.",
+  "nav.toll.partial": "Volunteer data, may be incomplete. Check the overhead signs.",
   "nav.light.aria": "Traffic lights on OpenStreetMap along your route",
   "trip.add": "＋ Add to trip",
   "trip.in": "In trip",
@@ -255,6 +265,7 @@ const en = {
   "voice.cam": "Speed camera ahead{limit}.",
   "voice.camLimit": ", limit {n}",
   "voice.in": "In {n} metres, {text}",
+  "voice.inKm": "In {n} kilometres, {text}",
 
   // location
   "loc.off": "Location is off.",
@@ -487,6 +498,7 @@ const ms: Record<Key, string> = {
   "cat.money": "ATM & bank",
   "cat.shop": "Kedai",
   "cat.parking": "Parkir",
+  "cat.shelter": "Tempat berteduh",
 
   "nearby.you": "Berdekatan anda",
   "nearby.centre": "Sekitar tengah peta",
@@ -596,6 +608,15 @@ const ms: Record<Key, string> = {
   "nav.light.left.one": "tinggal {n} lampu",
   "nav.light.left.other": "tinggal {n} lampu",
   "nav.light.none": "Tiada lagi lampu isyarat dipetakan",
+  "nav.toll.ahead": "Plaza tol di hadapan",
+  "nav.toll.tagged": "Ditanda dalam OpenStreetMap",
+  "nav.toll.tng": "Kad TnG",
+  "nav.toll.smarttag": "SmartTAG",
+  "nav.toll.rfid": "RFID",
+  "nav.toll.booths": "{n} petak",
+  "nav.toll.booth1": "1 petak",
+  "nav.toll.none": "Jenis lorong tidak dipetakan untuk plaza ini. Baca papan tanda di atas: RFID kadangkala dipasang pada lorong sedia ada.",
+  "nav.toll.partial": "Data sukarelawan, mungkin tidak lengkap. Semak papan tanda di atas.",
   "nav.light.aria": "Lampu isyarat dalam OpenStreetMap di sepanjang laluan anda",
   "trip.add": "＋ Tambah ke perjalanan",
   "trip.in": "Dalam perjalanan",
@@ -655,6 +676,7 @@ const ms: Record<Key, string> = {
   "voice.cam": "Kamera laju di hadapan{limit}.",
   "voice.camLimit": ", had {n}",
   "voice.in": "Dalam {n} meter, {text}",
+  "voice.inKm": "Dalam {n} kilometer, {text}",
 
   "loc.off": "Lokasi dimatikan.",
   "loc.turnOn": "Tekan untuk menghidupkannya.",

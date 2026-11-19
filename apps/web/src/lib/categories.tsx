@@ -42,6 +42,10 @@ export const CATEGORY_UI: Record<CategoryId, { color: string; icon: string }> = 
     color: "#f97316",
     icon: '<path d="M5 8h14l-1 12H6zM9 8V6a3 3 0 0 1 6 0v2"/>',
   },
+  shelter: {
+    color: "#0891b2",
+    icon: '<path d="M12 3a9 9 0 0 0-9 9h18a9 9 0 0 0-9-9z"/><path d="M12 12v6.5a2 2 0 0 0 4 0"/>',
+  },
   parking: {
     color: "#3b82f6",
     icon: '<rect x="4" y="3" width="16" height="18" rx="3"/><path d="M10 17V8h3a2.5 2.5 0 0 1 0 5h-3"/>',
