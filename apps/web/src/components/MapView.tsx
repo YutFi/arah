@@ -48,6 +48,11 @@ maplibregl.setWorkerUrl(workerUrl);
 /** Lights are small dots; draw at most this many so a very long route stays smooth. */
 const MAX_LIGHT_MARKERS = 400;
 
+/** Names come from OpenStreetMap, so they are escaped before going into marker HTML. */
+function escapeHtml(x: string): string {
+  return x.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
+}
+
 /** Traffic light: dark housing with red, amber and green lamps (sized by CSS). */
 const lightSvg =
   '<svg viewBox="0 0 16 26" aria-hidden="true"><rect x="1" y="1" width="14" height="24" rx="5" fill="#1f2937" stroke="#fff" stroke-width="1.6"/><circle cx="8" cy="7" r="3" fill="#ef4444"/><circle cx="8" cy="13" r="3" fill="#fbbf24"/><circle cx="8" cy="19" r="3" fill="#22c55e"/></svg>';
@@ -332,6 +337,51 @@ export const MapView = forwardRef<MapHandle, Props>(function MapView(
             node.setAttribute("role", "img");
             node.setAttribute("aria-label", t.rm != null ? `Toll plaza ${t.name}, about RM ${t.rm.toFixed(2)}` : `Toll plaza ${t.name}, price not available`);
             node.innerHTML = `<svg ${markSvgAttrs} width="14" height="14"><path d="M3 20h18M6 20V9l6-5 6 5v11M10 20v-6h4v6"/></svg>${t.rm != null ? `<span>RM ${t.rm.toFixed(2)}</span>` : ""}`;
+            return node;
+          },
+        });
+      }
+      for (const l of marks.lanes) {
+        want.set(`l:${l.lat},${l.lng}`, {
+          ...l,
+          make: () => {
+            const node = document.createElement("div");
+            node.className = "mark lane";
+            node.setAttribute("role", "img");
+            node.setAttribute("aria-label", `Motorcycle lane around here, ${l.name}`);
+            node.innerHTML = `<svg ${markSvgAttrs} width="15" height="15"><circle cx="6" cy="17" r="3"/><circle cx="18" cy="17" r="3"/><path d="M6 17l3-7h5l4 7M9 10l-1-3h3"/></svg><span>${escapeHtml(l.name)}</span>`;
+            return node;
+          },
+        });
+      }
+      for (const sh of marks.shelters) {
+        want.set(`h:${sh.lat},${sh.lng}`, {
+          ...sh,
+          make: () => {
+            const node = document.createElement("div");
+            node.className = "mark shelter";
+            node.setAttribute("role", "img");
+            node.setAttribute("aria-label", sh.name ? `Rain shelter ${sh.name}, mapped on OpenStreetMap` : "Rain shelter mapped on OpenStreetMap");
+            node.innerHTML = `<svg ${markSvgAttrs} width="15" height="15"><path d="M12 3a9 9 0 0 0-9 9h18a9 9 0 0 0-9-9z"/><path d="M12 12v6.5a2 2 0 0 0 4 0"/></svg>`;
+            return node;
+          },
+        });
+      }
+      for (const b of marks.bridges) {
+        want.set(`b:${b.lat},${b.lng}`, {
+          ...b,
+          make: () => {
+            const node = document.createElement("div");
+            node.className = `mark bridge${b.warn === "over" ? " over" : ""}`;
+            node.setAttribute("role", "img");
+            const h = b.maxheight ? `${b.maxheight.replace(/\s*m$/i, "")} m` : "";
+            node.setAttribute(
+              "aria-label",
+              b.kind === "overbridge"
+                ? h ? `Footbridge over the road, mapped limit ${h}` : "Footbridge over the road, clearance not mapped. Check the sign."
+                : h ? `Height limit ${h}${b.warn === "over" ? ", lower than your truck" : ""}` : "Height limit, number not mapped",
+            );
+            node.innerHTML = `<svg ${markSvgAttrs} width="15" height="15"><path d="M3 18h18M3 18V9h18v9M7 9V6h10v3"/><path d="M8 18v-4M16 18v-4"/></svg>${h ? `<span>${escapeHtml(h)}</span>` : ""}`;
             return node;
           },
         });

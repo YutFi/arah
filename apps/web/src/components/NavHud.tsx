@@ -1,6 +1,6 @@
 import { formatArrival, formatDistance, mpsToKph, type CameraAlert, type LaneStatus, type Maneuver, type NavUpdate, type TollPaymentSummary } from "@arah/core";
 import { fmtDuration, maneuverText, useT, type Key } from "../lib/i18n";
-import { FlagIcon, ForkIcon, LaneIcon, LocateIcon, ManeuverIcon, SpeakerIcon } from "./icons";
+import { FlagIcon, ForkIcon, LaneIcon, LocateIcon, SpeakerIcon } from "./icons";
 
 interface Props {
   nav: NavUpdate | null;
@@ -38,6 +38,48 @@ interface Props {
   onTrip: () => void;
 }
 
+/** Valhalla manoeuvre type -> a simple arrow. */
+function icon(type: number): string {
+  switch (type) {
+    case 4:
+    case 5:
+    case 6:
+      return "⚑";
+    case 9:
+    case 17:
+    case 23:
+    case 36:
+      return "↗";
+    case 10:
+    case 2:
+    case 18:
+    case 20:
+      return "→";
+    case 11:
+      return "↘";
+    case 12:
+      return "↷";
+    case 13:
+      return "↶";
+    case 14:
+      return "↙";
+    case 15:
+    case 3:
+    case 19:
+    case 21:
+      return "←";
+    case 16:
+    case 24:
+    case 37:
+      return "↖";
+    case 26:
+    case 27:
+      return "⟳";
+    default:
+      return "↑";
+  }
+}
+
 const CAMERA_KEY: Record<CameraAlert["camera"]["type"], Key> = { fixed: "nav.cam.fixed", "red-light": "nav.cam.red-light", "average-speed": "nav.cam.average-speed" };
 
 /** Small traffic light: dark housing with red, amber and green lamps. */
@@ -65,7 +107,7 @@ export function NavHud(p: Props) {
         <div className={`banner${p.offRoute && !arrived ? " off" : ""}`}>
           {arrived ? (
             <>
-              <div className="banner-icon"><FlagIcon size={34} /></div>
+              <div className="banner-icon">⚑</div>
               <div className="banner-text">
                 <div className="banner-dist">{t("nav.arrived")}</div>
               </div>
@@ -80,7 +122,7 @@ export function NavHud(p: Props) {
             </>
           ) : maneuver ? (
             <>
-              <div className="banner-icon" key={maneuver.beginShapeIndex} aria-hidden><ManeuverIcon type={maneuver.type} size={44} /></div>
+              <div className="banner-icon" key={maneuver.beginShapeIndex} aria-hidden>{icon(maneuver.type)}</div>
               <div className="banner-text">
                 <div className="banner-dist">{nav?.distanceToNextM != null ? formatDistance(nav.distanceToNextM) : ""}</div>
                 <div className="banner-instr">{maneuverText(maneuver)}</div>

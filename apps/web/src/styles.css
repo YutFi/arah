@@ -517,12 +517,22 @@ svg { flex: none; }
 .bar { background: var(--glass); backdrop-filter: blur(16px) saturate(1.5); -webkit-backdrop-filter: blur(16px) saturate(1.5); animation: sheetUp .45s var(--spring) both; }
 
 /* map markers and toast */
-.poi-marker { animation: markerDrop .5s var(--spring) backwards; }
-.stop-pin { animation: markerDrop .5s var(--spring) both; }
-.mark { animation: chipIn .4s var(--spring) both; }
+/* MapLibre positions each marker with an inline transform on its root element, so a CSS animation
+   must never run on the root (it would override that and pin the icon to the corner). Animate children. */
+.poi-marker > svg, .mark > svg, .mark > span { animation: markerDrop .5s var(--spring) backwards; }
 .toast { animation: sheetUp .4s var(--spring) both; }
 .skeleton { position: relative; overflow: hidden; }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .001ms !important; animation-delay: 0s !important; animation-iteration-count: 1 !important; transition-duration: .001ms !important; }
 }
+
+/* Route icons for motorcycle (lane start, rain shelter) and truck (footbridge / height limit) */
+.mark.lane { background: #1a56b3; color: #fff; }
+.mark.shelter { background: #0891b2; color: #fff; }
+.mark.bridge { background: #475569; color: #fff; }
+.mark.bridge.over { background: #dc2626; }
+.mark.lane span, .mark.bridge span { max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.legend .l-lane { background: #1a56b3; }
+.legend .l-shelter { background: #0891b2; }
+.legend .l-bridge { background: #475569; }
