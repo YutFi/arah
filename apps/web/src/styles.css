@@ -536,3 +536,49 @@ svg { flex: none; }
 .legend .l-lane { background: #1a56b3; }
 .legend .l-shelter { background: #0891b2; }
 .legend .l-bridge { background: #475569; }
+
+/* ---- Phone held sideways (landscape): panels become a column on the left, the map keeps the rest ---- */
+@media (orientation: landscape) and (max-height: 560px) {
+  :root { --side: min(400px, 46vw); --gap: 10px; }
+  /* search + chips */
+  .search { right: auto; width: var(--side); padding: 8px 0 0 max(var(--gap), env(safe-area-inset-left)); }
+  .search-box input { padding: 11px 0; font-size: 16px; }
+  .chips { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
+  .chips::-webkit-scrollbar { display: none; }
+  /* bottom sheets: a card in the left column, scrollable, never taller than the screen */
+  .sheet { right: auto; width: var(--side); left: max(var(--gap), env(safe-area-inset-left)); bottom: var(--gap); border-radius: 20px; max-height: calc(100dvh - 2 * var(--gap)); padding: 12px 14px 12px; }
+  .sheet::before { display: none; }
+  .sheet .actions { bottom: -12px; }
+  .stack { left: 0; right: 0; }
+  .stack .sheet { position: relative; left: auto; bottom: auto; margin: 0 0 var(--gap) max(var(--gap), env(safe-area-inset-left)); }
+  .stack .toast { margin: 0 0 var(--gap) max(var(--gap), env(safe-area-inset-left)); width: var(--side); }
+  .stack-tools { padding: 0 max(12px, env(safe-area-inset-right)) 12px 12px; }
+  .stack:not(:has(.sheet)) .stack-tools { padding-bottom: 16px; }
+  .locate.top { right: max(12px, env(safe-area-inset-right)); top: 12px; }
+  .modal { align-items: center; justify-content: center; }
+  .modal-card { width: min(560px, 80vw); max-height: 92dvh; border-radius: 20px; }
+  .modal-card::before { display: none; }
+  /* driving: instructions and status pills on the left, trip bar and speed along the bottom right */
+  .hud-top { right: auto; width: var(--side); padding: 8px 0 0 max(var(--gap), env(safe-area-inset-left)); max-height: calc(100dvh - 96px); overflow-y: auto; gap: 6px; scrollbar-width: none; }
+  .hud-top::-webkit-scrollbar { display: none; }
+  .banner { padding: 8px 12px; gap: 12px; border-radius: 16px; }
+  .banner-icon { width: 50px; height: 50px; font-size: 32px; border-radius: 13px; }
+  .banner-dist { font-size: 25px; }
+  .banner-instr { font-size: 15px; }
+  .status { font-size: 13px; padding: 5px 11px; }
+  .status.toll-pill { padding: 7px 12px; gap: 4px; }
+  .hud-side { top: 12px; right: max(12px, env(safe-area-inset-right)); flex-direction: row-reverse; }
+  .hud-side .round { width: 44px; height: 44px; font-size: 20px; }
+  .hud-bottom { left: auto; right: 0; width: min(520px, 56vw); padding: 0 max(10px, env(safe-area-inset-right)) 8px 0 !important; }
+  .speed { position: fixed; left: max(10px, env(safe-area-inset-left)); bottom: 8px; width: 64px; height: 64px; margin: 0; }
+  .speed-num { font-size: 24px; }
+  .bar { padding: 8px 10px 8px 14px; border-radius: 16px; }
+  .bar-stats { gap: 14px; min-height: 36px; }
+  .bar-stats b { font-size: 17px; }
+  /* route list and vehicle picker use less height */
+  .sheet, .stack .sheet { max-height: calc(100dvh - 2 * var(--gap)) !important; }
+  .results { max-height: calc(100dvh - 140px); }
+  .nearby { max-height: calc(100dvh - 2 * var(--gap)); }
+  .route-card { padding: 8px 12px; }
+  .veh-seg { min-height: 40px; }
+}
