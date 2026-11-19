@@ -9,7 +9,7 @@ import { haversine, isInMalaysiaBBox, type LatLng } from "./geo";
  * by popularity. Results are simply the nearest named places of each kind.
  */
 
-export type CategoryId = "fuel" | "worship" | "food" | "fun" | "hot" | "see" | "ev" | "health" | "money" | "shop" | "parking";
+export type CategoryId = "fuel" | "worship" | "food" | "fun" | "hot" | "see" | "ev" | "health" | "money" | "shop" | "parking" | "shelter";
 
 /** [osm key, osm value, short label shown to the person] */
 type TagRule = readonly [key: string, value: string, label: string];
@@ -129,10 +129,17 @@ export const CATEGORIES: readonly PlaceCategory[] = [
     label: "Parking",
     rules: [["amenity", "parking", "Parking"]],
   },
+  {
+    // Rain cover for riders (tempat berteduh): shelters mapped on OpenStreetMap, such as bus
+    // shelters and pavilions. Whether one is dry, safe or fits a motorcycle is not in the data.
+    id: "shelter",
+    label: "Shelter",
+    rules: [["amenity", "shelter", "Shelter"]],
+  },
 ];
 
 /** These may be unnamed on the map (a brand or operator is enough to show them). */
-const UNNAMED_OK: readonly CategoryId[] = ["fuel", "ev", "money"];
+const UNNAMED_OK: readonly CategoryId[] = ["fuel", "ev", "money", "shelter"];
 
 export interface Poi {
   id: string;
@@ -248,7 +255,8 @@ export function parseOverpass(json: unknown): Poi[] {
     if (!isInMalaysiaBBox({ lat, lng })) continue;
     const cls = classify(tags);
     if (!cls) continue;
-    const name = tags["name:en"] ?? tags.name ?? tags.brand ?? tags.operator ?? (cls.category === "ev" ? tags.network : undefined);
+    const name =
+      tags["name:en"] ?? tags.name ?? tags.brand ?? tags.operator ?? (cls.category === "ev" ? tags.network : undefined) ?? (cls.category === "shelter" ? cls.sub : undefined);
     if (!name) continue;
     const id = `${el.type}/${el.id}`;
     if (seen.has(id)) continue;

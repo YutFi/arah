@@ -1,5 +1,6 @@
-import { formatArrival, formatDistance, mpsToKph, type CameraAlert, type Maneuver, type NavUpdate } from "@arah/core";
+import { formatArrival, formatDistance, mpsToKph, type CameraAlert, type LaneStatus, type Maneuver, type NavUpdate, type TollPaymentSummary } from "@arah/core";
 import { fmtDuration, maneuverText, useT, type Key } from "../lib/i18n";
+import { FlagIcon, ForkIcon, LaneIcon, LocateIcon, ManeuverIcon, SpeakerIcon } from "./icons";
 
 interface Props {
   nav: NavUpdate | null;
@@ -9,7 +10,14 @@ interface Props {
   simSpeedKph: number;
   onSimSpeed: () => void;
   alert: CameraAlert | null;
-  rerouting: boolean;
+  /** The position is off the route (a wrong turn). */
+  offRoute: boolean;
+  /** Asking for a new route (busy), or the last ask failed and it is trying again (retry). */
+  rerouteStatus: "idle" | "busy" | "retry";
+  /** Motorcycle lane on this stretch, or coming up. Null for other vehicles. */
+  lane: LaneStatus | null;
+  /** Simulated drive only: leave the route to try the wrong-turn reroute. */
+  onWrongTurn: () => void;
   /** Slow-traffic prompt: how far you moved in how long, or null when not stuck. */
   jam: { movedM: number; spanS: number } | null;
   onJamFind: () => void;
@@ -23,51 +31,11 @@ interface Props {
   onStop: () => void;
   /** Mapped traffic lights still ahead on this route; null when not known. */
   lights: { nextM: number | null; left: number } | null;
+  /** Next toll plaza within 3 km: what OpenStreetMap says about its booths (pay null = nothing tagged). */
+  toll: { name: string; distM: number; pay: TollPaymentSummary | null } | null;
   /** Multi-stop trip: which stop this is. Null on an ordinary trip. */
   tripPill: { i: number; n: number; name: string } | null;
   onTrip: () => void;
-}
-
-/** Valhalla manoeuvre type -> a simple arrow. */
-function icon(type: number): string {
-  switch (type) {
-    case 4:
-    case 5:
-    case 6:
-      return "⚑";
-    case 9:
-    case 17:
-    case 23:
-    case 36:
-      return "↗";
-    case 10:
-    case 2:
-    case 18:
-    case 20:
-      return "→";
-    case 11:
-      return "↘";
-    case 12:
-      return "↷";
-    case 13:
-      return "↶";
-    case 14:
-      return "↙";
-    case 15:
-    case 3:
-    case 19:
-    case 21:
-      return "←";
-    case 16:
-    case 24:
-    case 37:
-      return "↖";
-    case 26:
-    case 27:
-      return "⟳";
-    default:
-      return "↑";
-  }
 }
 
 const CAMERA_KEY: Record<CameraAlert["camera"]["type"], Key> = { fixed: "nav.cam.fixed", "red-light": "nav.cam.red-light", "average-speed": "nav.cam.average-speed" };
@@ -88,22 +56,31 @@ export function NavHud(p: Props) {
   const { t } = useT();
   const { nav, maneuver } = p;
   const arrived = nav?.status === "arrived";
+  const booths = (n: number) => (n === 1 ? t("nav.toll.booth1") : t("nav.toll.booths", { n }));
   const kph = p.simulating ? p.simSpeedKph : p.speedMps != null ? mpsToKph(p.speedMps) : null;
 
   return (
     <>
       <div className="hud-top" style={{ paddingTop: "max(10px, env(safe-area-inset-top))" }}>
-        <div className="banner">
+        <div className={`banner${p.offRoute && !arrived ? " off" : ""}`}>
           {arrived ? (
             <>
-              <div className="banner-icon">⚑</div>
+              <div className="banner-icon"><FlagIcon size={34} /></div>
               <div className="banner-text">
                 <div className="banner-dist">{t("nav.arrived")}</div>
               </div>
             </>
+          ) : p.offRoute ? (
+            <>
+              <div className="banner-icon spin" aria-hidden><ForkIcon size={34} /></div>
+              <div className="banner-text" role="status">
+                <div className="banner-dist off">{t("nav.off.title")}</div>
+                <div className="banner-instr">{p.rerouteStatus === "retry" ? t("nav.off.retry") : t("nav.off.sub")}</div>
+              </div>
+            </>
           ) : maneuver ? (
             <>
-              <div className="banner-icon" aria-hidden>{icon(maneuver.type)}</div>
+              <div className="banner-icon" key={maneuver.beginShapeIndex} aria-hidden><ManeuverIcon type={maneuver.type} size={44} /></div>
               <div className="banner-text">
                 <div className="banner-dist">{nav?.distanceToNextM != null ? formatDistance(nav.distanceToNextM) : ""}</div>
                 <div className="banner-instr">{maneuverText(maneuver)}</div>
@@ -118,7 +95,7 @@ export function NavHud(p: Props) {
 
         {p.tripPill && (
           <button className="status stop-pill" onClick={p.onTrip}>
-            <span aria-hidden>⚑</span> {t("trip.pill", { i: p.tripPill.i, n: p.tripPill.n, name: p.tripPill.name })}
+            <FlagIcon size={16} /> {t("trip.pill", { i: p.tripPill.i, n: p.tripPill.n, name: p.tripPill.name })}
           </button>
         )}
         {p.lights && !arrived && (
@@ -131,6 +108,27 @@ export function NavHud(p: Props) {
                 <b>{t("nav.light.next", { d: formatDistance(Math.round(p.lights.nextM / 10) * 10) })}</b>
                 <small> · {t(`nav.light.left.${p.lights.left === 1 ? "one" : "other"}` as Key, { n: p.lights.left })}</small>
               </span>
+            )}
+          </div>
+        )}
+
+        {p.toll && !arrived && (
+          <div className="status toll-pill" role="status">
+            <div className="toll-head">
+              <b>{t("nav.toll.ahead")}</b>
+              <span>{p.toll.name ? `${p.toll.name} · ` : ""}{formatDistance(Math.round(p.toll.distM / 10) * 10)}</span>
+            </div>
+            {p.toll.pay ? (
+              <>
+                <div className="toll-methods" aria-label={t("nav.toll.tagged")}>
+                  {p.toll.pay.tng > 0 && <span className="pay tng">{t("nav.toll.tng")} <i>{booths(p.toll.pay.tng)}</i></span>}
+                  {p.toll.pay.smarttag > 0 && <span className="pay smart">{t("nav.toll.smarttag")} <i>{booths(p.toll.pay.smarttag)}</i></span>}
+                  {p.toll.pay.rfid > 0 && <span className="pay rfid">{t("nav.toll.rfid")} <i>{booths(p.toll.pay.rfid)}</i></span>}
+                </div>
+                <small>{t("nav.toll.tagged")}. {t("nav.toll.partial")}</small>
+              </>
+            ) : (
+              <small>{t("nav.toll.none")}</small>
             )}
           </div>
         )}
@@ -155,22 +153,36 @@ export function NavHud(p: Props) {
             </div>
           </div>
         )}
-        {p.rerouting && <div className="status">{t("nav.rerouting")}</div>}
+        {p.lane && (p.lane.inside || p.lane.next) && !arrived && (
+          <div className="status lane" role="status">
+            <LaneIcon size={16} />
+            <span>
+              {p.lane.inside
+                ? t("nav.lane.on", { name: p.lane.inside.name })
+                : t("nav.lane.next", { d: formatDistance(Math.round((p.lane.next?.distanceM ?? 0) / 50) * 50), name: p.lane.next?.span.name ?? "" })}
+            </span>
+          </div>
+        )}
         {p.gpsWeak && !p.simulating && <div className="status warn">{t("nav.gpsWeak")}</div>}
         {p.simulating && (
-          <button className="status sim" onClick={p.onSimSpeed}>
-            {t("nav.sim", { n: p.simSpeedKph })}
-          </button>
+          <div className="sim-row">
+            <button className="status sim" onClick={p.onSimSpeed}>
+              {t("nav.sim", { n: p.simSpeedKph })}
+            </button>
+            <button className="status sim" onClick={p.onWrongTurn} disabled={p.offRoute}>
+              {t("nav.sim.wrong")}
+            </button>
+          </div>
         )}
       </div>
 
       <div className="hud-side">
         <button className={`round${p.voiceOn ? "" : " off"}`} aria-label={p.voiceOn ? t("nav.mute") : t("nav.unmute")} onClick={p.onVoice}>
-          {p.voiceOn ? "🔊" : "🔇"}
+          <SpeakerIcon off={!p.voiceOn} size={24} />
         </button>
-        <button className="round" aria-label={t("reroute.btn")} onClick={p.onReroute}>⇄</button>
+        <button className="round" aria-label={t("reroute.btn")} onClick={p.onReroute}><ForkIcon size={24} /></button>
         {p.showRecenter && (
-          <button className="round" aria-label={t("nav.recenter")} onClick={p.onRecenter}>◎</button>
+          <button className="round" aria-label={t("nav.recenter")} onClick={p.onRecenter}><LocateIcon size={24} /></button>
         )}
       </div>
 

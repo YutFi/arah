@@ -155,13 +155,44 @@ describe("navigator", () => {
     expect(nav.update(fix({ lat: 3.1101, lng: 101.702 })).nextManeuverIndex).toBe(2);
   });
 
-  it("needs three bad fixes in a row before calling off-route", () => {
+  it("needs two bad fixes in a row before calling off-route", () => {
     const nav = createNavigator(route);
-    const off = fix({ lat: 3.105, lng: 101.7025 }); // ~275 m east of the road
+    const off = fix({ lat: 3.105, lng: 101.7007 }, { timestamp: 0 }); // ~78 m east of the road: beyond the limit, not extreme
     expect(nav.update(off).status).toBe("on-route");
-    expect(nav.update(off).status).toBe("on-route");
-    expect(nav.update(off).status).toBe("off-route");
+    expect(nav.update({ ...off, timestamp: 1000 }).status).toBe("off-route");
     expect(nav.update(fix({ lat: 3.105, lng: 101.7 })).status).toBe("on-route");
+  });
+
+  it("one clearly-elsewhere fix is enough", () => {
+    const nav = createNavigator(route);
+    expect(nav.update(fix({ lat: 3.105, lng: 101.7025 })).status).toBe("off-route"); // ~275 m east
+  });
+
+  it("calls off-route at once when the driver heads against the route, even if only a little off the line", () => {
+    const nav = createNavigator(route); // leg 1 runs north
+    // ~50 m east of the road, heading south at 43 km/h
+    const u = nav.update(fix({ lat: 3.105, lng: 101.70045 }, { heading: 180, speedMps: 12 }));
+    expect(u.wrongWay).toBe(true);
+    expect(u.status).toBe("off-route");
+  });
+
+  it("does not call a wrong way when moving slowly, or when the heading follows the route", () => {
+    const nav = createNavigator(route);
+    const slow = nav.update(fix({ lat: 3.105, lng: 101.70045 }, { heading: 180, speedMps: 1 }));
+    expect(slow.wrongWay).toBe(false);
+    expect(slow.status).toBe("on-route");
+    const nav2 = createNavigator(route);
+    const along = nav2.update(fix({ lat: 3.105, lng: 101.70045 }, { heading: 5, speedMps: 12 }));
+    expect(along.wrongWay).toBe(false);
+  });
+
+  it("works out heading and speed from the last two positions when the device gives none", () => {
+    const nav = createNavigator(route);
+    nav.update(fix({ lat: 3.1052, lng: 101.70045 }, { timestamp: 0 }));
+    // 22 m south in 1 s, 50 m east of the road: against the route (which runs north)
+    const u = nav.update(fix({ lat: 3.1050, lng: 101.70045 }, { timestamp: 1000 }));
+    expect(u.wrongWay).toBe(true);
+    expect(u.status).toBe("off-route");
   });
 
   it("is more forgiving when GPS accuracy is poor", () => {

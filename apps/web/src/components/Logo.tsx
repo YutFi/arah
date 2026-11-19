@@ -1,15 +1,10 @@
-/** The Arah mark: a navigation arrow on a blue tile. */
+/** The Arah mark: a lane-yellow arrow on asphalt, with a dashed centre line running under it. */
 export function Logo({ size = 96 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 96 96" role="img" aria-label="Arah" className="logo">
-      <defs>
-        <linearGradient id="logo-bg" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0" stopColor="#4f94ff" />
-          <stop offset="1" stopColor="#0b4fe0" />
-        </linearGradient>
-      </defs>
-      <rect width="96" height="96" rx="22" fill="url(#logo-bg)" />
-      <path d="M48 17 L71 77 L48 64 L25 77 Z" fill="#fff" strokeLinejoin="round" />
+      <rect width="96" height="96" rx="20" fill="#14181b" />
+      <path d="M48 62 V92 M48 8 V14" stroke="#f6b800" strokeWidth="5" strokeDasharray="9 7" opacity=".55" />
+      <path d="M48 16 L70 72 L48 60 L26 72 Z" fill="#f6b800" stroke="#f7f4ec" strokeWidth="3" strokeLinejoin="round" />
     </svg>
   );
 }

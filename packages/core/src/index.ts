@@ -14,3 +14,7 @@ export * from "./tolls";
 export * from "./malay";
 export * from "./jam";
 export * from "./trip";
+export * from "./vehicle";
+export * from "./motorcycleLane";
+export * from "./tollPayment";
+export * from "./guidance";

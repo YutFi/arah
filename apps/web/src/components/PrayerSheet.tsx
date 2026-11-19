@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { compassPoint, hhmm, nextPrayer, PRAYER_ORDER, prayerTimes, qiblaBearing } from "../lib/prayer";
 import { t, useT, type Key } from "../lib/i18n";
+import { CloseIcon } from "./icons";
 
 interface Props {
   lat: number;
@@ -27,7 +28,7 @@ export function PrayerSheet({ lat, lng, fromYou, onClose }: Props) {
             <div className="sheet-title">{tt("prayer.title")}</div>
             <div className="sheet-sub">{tt("prayer.for", { place: fromYou ? tt("prayer.here") : tt("prayer.centre") })}</div>
           </div>
-          <button className="icon-btn" aria-label={tt("prayer.close")} onClick={onClose}>✕</button>
+          <button className="icon-btn" aria-label={tt("prayer.close")} onClick={onClose}><CloseIcon size={20} /></button>
         </div>
 
         <ul className="prayer-list">

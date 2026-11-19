@@ -1,6 +1,7 @@
 import { formatDistance } from "@arah/core";
 import type { Place } from "../lib/geocode";
 import { t } from "../lib/i18n";
+import { CheckIcon, CloseIcon, FlagIcon } from "./icons";
 
 /** Small bar shown on the map while a trip is being put together. */
 export function TripBar({ count, onEdit, onStart }: { count: number; onEdit: () => void; onStart: () => void }) {
@@ -39,7 +40,7 @@ export function TripSheet(p: SheetProps) {
       <div className="modal-card" onClick={(e) => e.stopPropagation()} style={{ paddingBottom: "max(20px, env(safe-area-inset-bottom))" }}>
         <div className="sheet-head">
           <div className="sheet-title">{t("trip.title")}</div>
-          <button className="icon-btn" aria-label={t("common.close")} onClick={p.onClose}>✕</button>
+          <button className="icon-btn" aria-label={t("common.close")} onClick={p.onClose}><CloseIcon size={20} /></button>
         </div>
         {!driving && <div className="foot-note">{t("trip.hint")}</div>}
         {p.stops.length === 0 && <p>{t("trip.empty")}</p>}
@@ -49,7 +50,7 @@ export function TripSheet(p: SheetProps) {
             const now = driving && i === cur;
             return (
               <li key={s.id} className={`trip-row${done ? " done" : ""}${now ? " now" : ""}`}>
-                <span className="trip-badge" aria-hidden>{done ? "✓" : i + 1}</span>
+                <span className="trip-badge" aria-hidden>{done ? <CheckIcon size={14} /> : i + 1}</span>
                 <div className="trip-name">
                   <b>{s.name}</b>
                   {s.detail && <small>{s.detail}</small>}
@@ -65,7 +66,7 @@ export function TripSheet(p: SheetProps) {
                   {driving && i > cur && (
                     <button className="chip-btn" onClick={() => p.onGoTo(i)}>{t("trip.skipTo")}</button>
                   )}
-                  {!done && !now && <button className="icon-btn" aria-label={t("trip.remove")} onClick={() => p.onRemove(i)}>✕</button>}
+                  {!done && !now && <button className="icon-btn" aria-label={t("trip.remove")} onClick={() => p.onRemove(i)}><CloseIcon size={20} /></button>}
                 </div>
               </li>
             );
@@ -109,7 +110,7 @@ export function NextStopPrompt(p: PromptProps) {
   return (
     <div className="modal prompt" role="alertdialog" aria-modal="true" aria-labelledby="next-stop-title" aria-describedby="next-stop-body">
       <div className="modal-card center" style={{ paddingBottom: "max(20px, env(safe-area-inset-bottom))" }}>
-        <div className="prompt-flag" aria-hidden>⚑</div>
+        <div className="prompt-flag" aria-hidden><FlagIcon size={30} /></div>
         <h2 id="next-stop-title">{t("trip.arrived", { name: p.arrivedAt.name })}</h2>
         <p id="next-stop-body">
           <b>{t("trip.next")}</b>

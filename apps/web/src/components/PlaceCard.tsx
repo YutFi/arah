@@ -5,6 +5,7 @@ import { CatIcon, CATEGORY_UI } from "../lib/categories";
 import { subLabel, useT } from "../lib/i18n";
 import { removeSaved, savedAt, savePlace, useSaved, type SavedKind } from "../lib/saved";
 import { appleMapsUrl, googleMapsUrl, isApple, shareSpot, wazeUrl } from "../lib/share";
+import { CloseIcon, PinIcon, StarIcon } from "./icons";
 
 interface Props {
   place: Place;
@@ -63,7 +64,7 @@ export function PlaceCard({ place, distanceM, naming, onDirections, onClose, inT
       <div className="sheet-head">
         <div className="place-head">
           <span className="cat-badge" style={{ background: color }}>
-            {place.category ? <CatIcon id={place.category} size={20} /> : <span aria-hidden>📍</span>}
+            {place.category ? <CatIcon id={place.category} size={20} /> : <PinIcon size={20} />}
           </span>
           <div>
             <div className="sheet-title">{place.name}</div>
@@ -72,7 +73,7 @@ export function PlaceCard({ place, distanceM, naming, onDirections, onClose, inT
             {naming && <div className="sheet-sub">{t("place.lookingUp")}</div>}
           </div>
         </div>
-        <button className="icon-btn" aria-label={t("place.close")} onClick={onClose}>✕</button>
+        <button className="icon-btn" aria-label={t("place.close")} onClick={onClose}><CloseIcon size={20} /></button>
       </div>
 
       {place.approximate && place.approxFor && <div className="note warn">{t("place.note.approx", { q: place.approxFor })}</div>}
@@ -84,7 +85,7 @@ export function PlaceCard({ place, distanceM, naming, onDirections, onClose, inT
 
       <div className="tools" role="group">
         <button className={`chip-btn${here.length ? " on" : ""}`} aria-expanded={panel === "save"} onClick={() => setPanel(panel === "save" ? null : "save")}>
-          {here.length ? "★ " + t("place.saved") : "☆ " + t("place.save")}
+          <StarIcon size={16} filled={here.length > 0} /> {here.length ? t("place.saved") : t("place.save")}
         </button>
         <button className="chip-btn" onClick={share}>{shared ? t("place.shared") : t("place.share")}</button>
         <button className="chip-btn" aria-expanded={panel === "open"} onClick={() => setPanel(panel === "open" ? null : "open")}>{t("place.openIn")}</button>
@@ -100,7 +101,7 @@ export function PlaceCard({ place, distanceM, naming, onDirections, onClose, inT
           </div>
           {here.map((s) => (
             <div className="saved-row" key={s.id}>
-              <span>★ {kindLabel(s.kind)}</span>
+              <span><StarIcon size={14} filled /> {kindLabel(s.kind)}</span>
               <button className="link" onClick={() => removeSaved(s.id)}>{t("place.remove")}</button>
             </div>
           ))}
