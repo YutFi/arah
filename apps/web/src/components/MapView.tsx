@@ -152,7 +152,7 @@ export const MapView = forwardRef<MapHandle, Props>(function MapView(
         source: "routes",
         filter: ["==", ["get", "sel"], 0],
         layout: { "line-cap": "round", "line-join": "round" },
-        paint: { "line-color": "#8a94a6", "line-width": 6, "line-opacity": 0.9 },
+        paint: { "line-color": "#7d8580", "line-width": 6, "line-opacity": 0.85 },
       });
       m.addLayer({
         id: "routes-casing",
@@ -160,7 +160,7 @@ export const MapView = forwardRef<MapHandle, Props>(function MapView(
         source: "routes",
         filter: ["==", ["get", "sel"], 1],
         layout: { "line-cap": "round", "line-join": "round" },
-        paint: { "line-color": "#0a3fa8", "line-width": 11 },
+        paint: { "line-color": "#14181b", "line-width": 11 },
       });
       m.addLayer({
         id: "routes-main",
@@ -168,7 +168,7 @@ export const MapView = forwardRef<MapHandle, Props>(function MapView(
         source: "routes",
         filter: ["==", ["get", "sel"], 1],
         layout: { "line-cap": "round", "line-join": "round" },
-        paint: { "line-color": "#2f7bff", "line-width": 7 },
+        paint: { "line-color": "#f6b800", "line-width": 7 },
       });
       ready.current = true;
       pushRoutes();
@@ -416,7 +416,7 @@ export const MapView = forwardRef<MapHandle, Props>(function MapView(
     if (!userMarker.current) {
       const node = document.createElement("div");
       node.className = "user-marker";
-      node.innerHTML = '<div class="user-pulse"></div><svg viewBox="0 0 40 40" width="40" height="40"><path d="M20 4 L31 33 L20 26 L9 33 Z" fill="#2f7bff" stroke="#fff" stroke-width="3" stroke-linejoin="round"/></svg>';
+      node.innerHTML = '<div class="user-pulse"></div><svg viewBox="0 0 40 40" width="40" height="40"><path d="M20 4 L31 33 L20 26 L9 33 Z" fill="#f6b800" stroke="#14181b" stroke-width="3" stroke-linejoin="round"/></svg>';
       userMarker.current = new maplibregl.Marker({ element: node, rotationAlignment: "map", pitchAlignment: "map" }).setLngLat([uLng, uLat]).addTo(m);
       mo.shown = { lat: uLat, lng: uLng, heading: head };
       mo.from = { ...mo.shown };

@@ -4,6 +4,7 @@ import type { AwasState } from "../lib/awasData";
 import { getManifest } from "../lib/osmData";
 import { config } from "../lib/config";
 import { setLang, useT } from "../lib/i18n";
+import { CloseIcon } from "./icons";
 
 interface Props {
   awas: AwasState;
@@ -52,7 +53,7 @@ export function AboutSheet({ awas, onClose }: Props) {
       <div className="modal-card" style={{ paddingBottom: "max(20px, env(safe-area-inset-bottom))" }}>
         <div className="sheet-head">
           <div className="sheet-title">{t("about.title")}</div>
-          <button className="icon-btn" aria-label={t("about.close")} onClick={onClose}>✕</button>
+          <button className="icon-btn" aria-label={t("about.close")} onClick={onClose}><CloseIcon size={20} /></button>
         </div>
 
         <h3>{t("lang.label")}</h3>

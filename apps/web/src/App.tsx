@@ -2,12 +2,16 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   addStop,
   avoidAheadPolygon,
+  bearing,
   createJamDetector,
   createNavigator,
   hasStop,
   haversine,
+  laneStatus,
   matchCamerasToRoute,
+  motorcycleNotes,
   moveStop,
+  movePoint,
   nearestFirst,
   nearestPerCategory,
   pointAtDistance,
@@ -42,7 +46,8 @@ import { Splash } from "./components/Splash";
 import { LocationHelp, LocationPrimer } from "./components/LocationHelp";
 import { onLocationPermissionChange, queryLocationPermission } from "./lib/permission";
 import { useGeolocation } from "./lib/useGeolocation";
-import { fetchRerouteOptions, fetchRouteChoices, fetchRoutes, fetchTripTotals } from "./lib/routing";
+import { fetchReroute, fetchRerouteOptions, fetchRouteChoices, fetchRoutes, fetchTripTotals } from "./lib/routing";
+import { setVehicle, useVehicle } from "./lib/vehicleStore";
 import { AWAS_LOOKAHEAD_M, AWAS_MATCH, loadAwas, type AwasState } from "./lib/awasData";
 import { voice, wakeLock } from "./lib/device";
 import { reversePlace, type Place } from "./lib/geocode";
@@ -54,6 +59,7 @@ import { hhmm, nextPrayer } from "./lib/prayer";
 import { readShared } from "./lib/share";
 import { savePlace, type SavedPlace } from "./lib/saved";
 import { loadTrip, saveTrip } from "./lib/tripStore";
+import { LocateIcon } from "./components/icons";
 
 type Phase = "browse" | "preview" | "navigating";
 const SIM_SPEEDS = [50, 120, 300, 5]; // 5 km/h is a crawl, to try the slow-traffic prompt
@@ -99,7 +105,9 @@ export default function App() {
   const [simSpeed, setSimSpeed] = useState(0); // index into SIM_SPEEDS
   const [simFix, setSimFix] = useState<Fix | null>(null);
   const [nav, setNav] = useState<NavUpdate | null>(null);
-  const [rerouting, setRerouting] = useState(false);
+  // idle: on route. busy: asking for a new route. retry: the last ask failed, trying again.
+  const [rerouteStatus, setRerouteStatus] = useState<"idle" | "busy" | "retry">("idle");
+  const [retryTick, setRetryTick] = useState(0);
   const [voiceOn, setVoiceOn] = useState(true);
   const [about, setAbout] = useState(false);
   const [prayerOpen, setPrayerOpen] = useState(false);
@@ -126,9 +134,18 @@ export default function App() {
   const [tripTotals, setTripTotals] = useState<{ lengthM: number; durationS: number } | null | undefined>(undefined);
   const [arrivalPrompt, setArrivalPrompt] = useState<"ask" | "busy" | "error" | null>(null);
 
+  const vehicle = useVehicle();
+  /** The vehicle the routes on screen were asked for. Clicks apply at once; typing a size waits a moment. */
+  const [routeVehicle, setRouteVehicle] = useState(vehicle);
   const announced = useRef(new Set<string>());
   const rerouteBusy = useRef(false);
   const lastReroute = useRef(0);
+  const rerouteFails = useRef(0);
+  const rerouteSpoken = useRef(false);
+  const rerouteAbort = useRef<AbortController | null>(null);
+  const prevFix = useRef<Fix | null>(null);
+  /** Simulated drive: the next tick leaves the route (to try the wrong-turn reroute). */
+  const wrongTurnReq = useRef(false);
   const simSpeedRef = useRef(SIM_SPEEDS[0] as number);
   simSpeedRef.current = SIM_SPEEDS[simSpeed] as number;
 
@@ -201,13 +218,24 @@ export default function App() {
     else if (geo.status === "denied") setLocUI((u) => (u === "primer" ? "help" : u));
   }, [geo.status]);
 
+  // The vehicle changed: ask again at once for a new type or axle count, after a short pause while a size is being typed.
+  useEffect(() => {
+    if (vehicle === routeVehicle) return;
+    if (vehicle.type !== routeVehicle.type || vehicle.truck.axles !== routeVehicle.truck.axles) {
+      setRouteVehicle(vehicle);
+      return;
+    }
+    const id = setTimeout(() => setRouteVehicle(vehicle), 800);
+    return () => clearTimeout(id);
+  }, [vehicle, routeVehicle]);
+
   // ---- routes for the chosen destination ------------------------------------
   useEffect(() => {
     if (phase !== "preview" || !dest || !origin) return;
     const ac = new AbortController();
     setLoading(true);
     setError(null);
-    fetchRouteChoices({ from: origin.pos, to: dest, avoidTolls }, ac.signal)
+    fetchRouteChoices({ from: origin.pos, to: dest, avoidTolls, vehicle: routeVehicle }, ac.signal)
       .then((rs) => {
         setRoutes(rs);
         setSel(0);
@@ -221,7 +249,7 @@ export default function App() {
         if (!ac.signal.aborted) setLoading(false);
       });
     return () => ac.abort();
-  }, [phase, dest, origin, avoidTolls]);
+  }, [phase, dest, origin, avoidTolls, routeVehicle]);
 
   // Count traffic lights, cameras and toll plazas on the routes being previewed.
   useEffect(() => {
@@ -249,13 +277,13 @@ export default function App() {
     }
     const ac = new AbortController();
     setTripTotals(undefined);
-    fetchTripTotals(origin.pos, trip.slice(stopIdx), avoidTolls, ac.signal)
+    fetchTripTotals(origin.pos, trip.slice(stopIdx), avoidTolls, routeVehicle, ac.signal)
       .then((r) => !ac.signal.aborted && setTripTotals(r))
       .catch(() => {
         /* no total shown; the trip itself is not affected */
       });
     return () => ac.abort();
-  }, [tripRun, phase, origin, trip, stopIdx, avoidTolls]);
+  }, [tripRun, phase, origin, trip, stopIdx, avoidTolls, routeVehicle]);
 
   // Reached a stop that is not the last: ask, and keep asking until answered.
   useEffect(() => {
@@ -375,7 +403,7 @@ export default function App() {
     if (!target) return;
     const from: LatLng = live ? { lat: live.lat, lng: live.lng } : (dest ?? target);
     setArrivalPrompt((cur) => (cur ? "busy" : cur));
-    fetchRoutes({ from, to: target, avoidTolls, alternates: 0 })
+    fetchRoutes({ from, to: target, avoidTolls, vehicle: routeVehicle, alternates: 0 })
       .then((rs) => {
         const next = rs[0];
         if (!next) throw new Error("no route");
@@ -509,6 +537,11 @@ export default function App() {
     setSimulate(false);
     setSimFix(null);
     rerouteAc.current?.abort();
+    rerouteAbort.current?.abort();
+    rerouteBusy.current = false;
+    rerouteFails.current = 0;
+    rerouteSpoken.current = false;
+    setRerouteStatus("idle");
     setReroute(null);
     setJam(null);
     voice.cancel();
@@ -516,13 +549,26 @@ export default function App() {
     geo.start(false);
   };
 
-  // Simulated GPS: walk along the route at the chosen speed.
+  // Simulated GPS: walk along the route at the chosen speed. "Test a wrong turn" steers off it at a right angle.
   useEffect(() => {
     if (phase !== "navigating" || !simulate || !route) return;
     let dist = 0;
+    let detour: { from: LatLng; bearing: number; dist: number } | null = null;
+    wrongTurnReq.current = false;
     const tick = () => {
       const mps = simSpeedRef.current / 3.6;
       const p = pointAtDistance(route, dist);
+      if (wrongTurnReq.current && !detour) {
+        wrongTurnReq.current = false;
+        detour = { from: p.point, bearing: (p.bearing + 90) % 360, dist: 0 };
+      }
+      if (detour) {
+        const v = Math.max(mps, 8); // a wrong turn is not taken at a crawl
+        detour.dist += v;
+        const at = movePoint(detour.from, detour.bearing, detour.dist);
+        setSimFix({ ...at, heading: detour.bearing, speedMps: v, accuracyM: 5, timestamp: Date.now() });
+        return;
+      }
       setSimFix({ ...p.point, heading: p.bearing, speedMps: mps, accuracyM: 5, timestamp: Date.now() });
       if (dist >= route.lengthM) clearInterval(id); // the last fix is clamped to the end of the route
       dist += mps;
@@ -538,30 +584,64 @@ export default function App() {
     setNav(tracker.update(live));
   }, [live, tracker, phase]);
 
-  // Off route for a few fixes in a row: ask for a new route from here.
+  // Off route: ask for a new route from here, carrying on the way you are facing. At once the first time,
+  // then with growing pauses if the server cannot be reached, and say so on screen.
   useEffect(() => {
-    if (nav?.status !== "off-route" || simulate || !dest || !live || rerouteBusy.current) return;
-    if (Date.now() - lastReroute.current < 8000) return;
+    if (phase !== "navigating") return;
+    if (nav?.status !== "off-route") {
+      rerouteFails.current = 0;
+      rerouteSpoken.current = false;
+      if (!rerouteBusy.current) setRerouteStatus("idle");
+      return;
+    }
+    if (!dest || !live || rerouteBusy.current) return;
+    const since = Date.now() - lastReroute.current;
+    const wait = rerouteFails.current === 0 ? 1200 : Math.min(15000, 2500 * 2 ** (rerouteFails.current - 1));
+    if (since < wait) {
+      const id = setTimeout(() => setRetryTick((n) => n + 1), wait - since);
+      return () => clearTimeout(id);
+    }
+    // Heading: the phone's, else worked out from the last position.
+    const before = prevFix.current;
+    const derived = before && haversine(before, live) >= 8 ? bearing(before, live) : null;
+    const heading = live.heading != null && Number.isFinite(live.heading) ? live.heading : derived;
     rerouteBusy.current = true;
     lastReroute.current = Date.now();
-    setRerouting(true);
-    fetchRoutes({ from: live, to: dest, avoidTolls, alternates: 0 })
-      .then((rs) => {
-        if (rs[0]) {
-          announced.current.clear();
-          setRoutes([rs[0]]);
-          setSel(0);
-          voice.speak(t("voice.updated"));
-        }
+    setRerouteStatus("busy");
+    if (!rerouteSpoken.current) {
+      rerouteSpoken.current = true;
+      voice.speak(t("voice.rerouting"));
+    }
+    const ac = new AbortController();
+    rerouteAbort.current = ac;
+    fetchReroute({ from: live, to: dest, avoidTolls, vehicle: routeVehicle, heading, speedMps: live.speedMps }, ac.signal)
+      .then((r) => {
+        if (ac.signal.aborted) return;
+        announced.current.clear();
+        rerouteFails.current = 0;
+        rerouteSpoken.current = false;
+        setRoutes([r]);
+        setSel(0);
+        setNav(null); // wait for the new route's first position before judging again
+        setRerouteStatus("idle");
+        voice.speak(t("voice.updated"));
       })
-      .catch(() => {
-        /* try again on a later fix */
+      .catch((e: Error) => {
+        if (e.name === "AbortError") return;
+        rerouteFails.current += 1;
+        setRerouteStatus("retry");
+        setRetryTick((n) => n + 1);
       })
       .finally(() => {
         rerouteBusy.current = false;
-        setRerouting(false);
       });
-  }, [nav, simulate, dest, live, avoidTolls, t]);
+    // not cancelled when the position changes: one ask at a time, finished or abandoned with the trip
+  }, [phase, nav, dest, live, avoidTolls, routeVehicle, retryTick, t]);
+
+  // Keeps the last position for working out the direction of travel.
+  useEffect(() => {
+    prevFix.current = live;
+  }, [live?.lat, live?.lng]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ---- stuck in slow traffic? Judged only from your own progress along the route ----
   const detector = useMemo(() => createJamDetector({ windowS: JAM_WINDOW_S }), [route]);
@@ -583,14 +663,14 @@ export default function App() {
     rerouteAc.current = ac;
     setReroute({ status: "loading" });
     fetchRerouteOptions(
-      { from: live, to: dest, avoidTolls, avoidArea: avoidAheadPolygon(route, nav.distanceAlongM, 150, AVOID_AHEAD_M), current: route },
+      { from: live, to: dest, avoidTolls, vehicle: routeVehicle, avoidArea: avoidAheadPolygon(route, nav.distanceAlongM, 150, AVOID_AHEAD_M), current: route },
       ac.signal,
     )
       .then((options) => !ac.signal.aborted && setReroute({ status: "ready", options }))
       .catch((e: Error) => {
         if (e.name !== "AbortError") setReroute({ status: "error", message: e.message });
       });
-  }, [route, dest, live, nav, avoidTolls]);
+  }, [route, dest, live, nav, avoidTolls, routeVehicle]);
 
   const closeReroute = useCallback(() => {
     rerouteAc.current?.abort();
@@ -616,6 +696,10 @@ export default function App() {
     detector.snooze(performance.now());
     setJam(null);
   };
+
+  // ---- motorcycle lane on this route ------------------------------------------
+  const laneStretches = useMemo(() => (routeVehicle.type === "motorcycle" && route ? motorcycleNotes(route).lanes : []), [routeVehicle.type, route]);
+  const laneNow = phase === "navigating" && nav && laneStretches.length > 0 && nav.status !== "arrived" ? laneStatus(laneStretches, nav.distanceAlongM) : null;
 
   // ---- speed cameras on this route -------------------------------------------
   // Matched on the preview too (to draw the pins); alerts only while navigating.
@@ -794,7 +878,7 @@ export default function App() {
             {showSearchHere && viewCenter && (
               <button className="pill" onClick={() => nearby.searchHere(viewCenter)}>{t("nearby.searchHere")}</button>
             )}
-            <button className="round" aria-label={t("loc.showMine")} onClick={onLocate}>◎</button>
+            <button className="round" aria-label={t("loc.showMine")} onClick={onLocate}><LocateIcon size={24} /></button>
           </div>
           {geo.status === "denied" && locUI === "none" && (
             <button className="toast" onClick={() => setLocUI("help")}>
@@ -836,7 +920,7 @@ export default function App() {
           aria-label={t("loc.showMine")}
           onClick={onLocate}
         >
-          ◎
+          <LocateIcon size={24} />
         </button>
       )}
 
@@ -848,6 +932,8 @@ export default function App() {
           onSelect={setSel}
           loading={loading}
           error={error}
+          vehicle={vehicle}
+          onVehicle={setVehicle}
           avoidTolls={avoidTolls}
           onToggleTolls={setAvoidTolls}
           startsFromGps={origin?.fromGps ?? false}
@@ -873,7 +959,12 @@ export default function App() {
           simSpeedKph={SIM_SPEEDS[simSpeed] as number}
           onSimSpeed={() => setSimSpeed((i) => (i + 1) % SIM_SPEEDS.length)}
           alert={alert}
-          rerouting={rerouting}
+          offRoute={nav?.status === "off-route"}
+          rerouteStatus={rerouteStatus}
+          lane={laneNow}
+          onWrongTurn={() => {
+            wrongTurnReq.current = true;
+          }}
           jam={reroute ? null : jam}
           onJamFind={jamFind}
           onJamStay={jamStay}

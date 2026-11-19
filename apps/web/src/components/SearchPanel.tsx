@@ -4,6 +4,7 @@ import { searchPlaces, type Place } from "../lib/geocode";
 import { CatIcon, CATEGORY_UI } from "../lib/categories";
 import { catLabel, setLang, useT } from "../lib/i18n";
 import { removeSaved, useSaved, type SavedPlace } from "../lib/saved";
+import { BriefcaseIcon, CloseIcon, HomeIcon, InfoIcon, MosqueIcon, ParkIcon, SearchIcon, StarIcon } from "./icons";
 
 interface Props {
   near: LatLng | null;
@@ -113,7 +114,7 @@ export function SearchPanel({ near, onPick, onAbout, active, onToggleCategory, o
   return (
     <div className="search" style={{ paddingTop: "max(12px, env(safe-area-inset-top))" }}>
       <form className="search-box" onSubmit={submit}>
-        <span className="search-icon" aria-hidden>⌕</span>
+        <span className="search-icon" aria-hidden><SearchIcon size={22} /></span>
         <input
           ref={inputRef}
           type="search"
@@ -135,7 +136,7 @@ export function SearchPanel({ near, onPick, onAbout, active, onToggleCategory, o
         >
           {lang === "ms" ? "EN" : "BM"}
         </button>
-        <button type="button" className="icon-btn" aria-label={t("search.about")} onClick={onAbout}>ⓘ</button>
+        <button type="button" className="icon-btn" aria-label={t("search.about")} onClick={onAbout}><InfoIcon size={20} /></button>
       </form>
 
       {showSaved && (
@@ -144,11 +145,12 @@ export function SearchPanel({ near, onPick, onAbout, active, onToggleCategory, o
             <li key={s.id} className="saved-item">
               <button className="result" onMouseDown={(e) => e.preventDefault()} onClick={() => onPickSaved(s)}>
                 <span className="result-name">
-                  {s.kind === "home" ? "🏠 " + t("saved.home") : s.kind === "work" ? "💼 " + t("saved.work") : s.kind === "parked" ? "🅿️ " + t("saved.parked") : "★ " + s.name}
+                  {s.kind === "home" ? <HomeIcon size={16} /> : s.kind === "work" ? <BriefcaseIcon size={16} /> : s.kind === "parked" ? <ParkIcon size={16} /> : <StarIcon size={16} filled />}{" "}
+                  {s.kind === "home" ? t("saved.home") : s.kind === "work" ? t("saved.work") : s.kind === "parked" ? t("saved.parked") : s.name}
                 </span>
                 {(s.kind !== "fav") && <span className="result-detail">{s.name}</span>}
               </button>
-              <button className="icon-btn sm" aria-label={`${t("saved.delete")}: ${s.name}`} onMouseDown={(e) => e.preventDefault()} onClick={() => removeSaved(s.id)}>✕</button>
+              <button className="icon-btn sm" aria-label={`${t("saved.delete")}: ${s.name}`} onMouseDown={(e) => e.preventDefault()} onClick={() => removeSaved(s.id)}><CloseIcon size={15} /></button>
             </li>
           ))}
           <li>
@@ -209,7 +211,7 @@ export function SearchPanel({ near, onPick, onAbout, active, onToggleCategory, o
       <div className="chips">
         {prayerLabel && (
           <button className="chip chip-btn-like" onClick={onPrayer} aria-label={t("prayer.title")}>
-            🕌 {prayerLabel}
+            <MosqueIcon size={16} /> {prayerLabel}
           </button>
         )}
         <button className="chip warn chip-btn-like" onClick={onTraffic}>{t("traffic.chip")} ⓘ</button>

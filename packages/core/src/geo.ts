@@ -29,6 +29,16 @@ export function bearing(a: LatLng, b: LatLng): number {
   return (deg(Math.atan2(y, x)) + 360) % 360;
 }
 
+/** The point `distM` metres from `p` in compass direction `bearingDeg` (flat-earth, fine for a few km). */
+export function movePoint(p: LatLng, bearingDeg: number, distM: number): LatLng {
+  const mPerDegLat = (Math.PI / 180) * R;
+  const mPerDegLng = mPerDegLat * Math.cos(rad(p.lat));
+  return {
+    lat: p.lat + (Math.cos(rad(bearingDeg)) * distM) / mPerDegLat,
+    lng: p.lng + (Math.sin(rad(bearingDeg)) * distM) / mPerDegLng,
+  };
+}
+
 /** Smallest absolute difference between two bearings, 0..180. */
 export function angleDiff(a: number, b: number): number {
   const d = Math.abs(((a - b) % 360) + 360) % 360;

@@ -2,6 +2,7 @@ import { formatDistance, type LatLng, type Route } from "@arah/core";
 import type { RerouteOption } from "../lib/routing";
 import { fmtDuration, t, useT } from "../lib/i18n";
 import { TrafficLinks } from "./TrafficSheet";
+import { CloseIcon } from "./icons";
 
 export type RerouteState =
   | { status: "loading" }
@@ -34,7 +35,7 @@ export function RerouteSheet({ state, currentLeftS, avoidKm, at, onUse, onClose 
             <div className="sheet-title">{t("reroute.title")}</div>
             <div className="sheet-sub">{t("reroute.sub")}</div>
           </div>
-          <button className="icon-btn" aria-label={t("common.close")} onClick={onClose}>✕</button>
+          <button className="icon-btn" aria-label={t("common.close")} onClick={onClose}><CloseIcon size={20} /></button>
         </div>
 
         {state.status === "loading" && (

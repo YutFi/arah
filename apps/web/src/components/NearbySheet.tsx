@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { DEFAULT_RADIUS_M, formatDistance, haversine, type LatLng, type Poi } from "@arah/core";
 import { CatIcon, CATEGORY_UI } from "../lib/categories";
 import { catLabel, subLabel, useT } from "../lib/i18n";
+import { CloseIcon } from "./icons";
 
 interface Props {
   pois: Poi[];
@@ -34,7 +35,7 @@ export function NearbySheet({ pois, from, fromYou, status, error, activeCount, o
             {t("nearby.sub", { km: DEFAULT_RADIUS_M / 1000 })}
           </div>
         </div>
-        <button className="icon-btn" aria-label={t("nearby.hide")} onClick={onClose}>✕</button>
+        <button className="icon-btn" aria-label={t("nearby.hide")} onClick={onClose}><CloseIcon size={20} /></button>
       </div>
 
       {status === "loading" && (

@@ -1,16 +1,35 @@
-import { avoidAheadPolygon, parseValhallaTrip, routeOverlap, type LatLng, type Route, type ValhallaTrip } from "@arah/core";
+import {
+  avoidAheadPolygon,
+  costingRequest,
+  DEFAULT_VEHICLE,
+  motorcycleOrder,
+  parseValhallaTrip,
+  routeOverlap,
+  type LatLng,
+  type Route,
+  type ValhallaTrip,
+  type Vehicle,
+} from "@arah/core";
 import { config } from "./config";
 import { t } from "./i18n";
 
 export interface RouteRequest {
   from: LatLng;
   to: LatLng;
+  /** Avoid toll roads (car, truck) or stay off expressways (motorcycle). */
   avoidTolls: boolean;
+  /** Car when left out. */
+  vehicle?: Vehicle;
+  /**
+   * Which way you are driving now (degrees from north), for a reroute. The server then
+   * starts on the road in that direction instead of telling you to turn round.
+   */
+  heading?: number;
   /** How many alternative routes to ask for besides the main one. */
   alternates?: number;
   /** An area the route must not go through (a closed ring of points). */
   avoid?: LatLng[];
-  /** Extra Valhalla "auto" costing options for a differently-styled route (for example shortest). */
+  /** Extra costing options for a differently-styled route (for example shortest). */
   options?: Record<string, number | boolean>;
 }
 
@@ -22,14 +41,17 @@ interface ValhallaResponse {
 
 /** Ask the routing server for routes. Returns the main route first. */
 export async function fetchRoutes(req: RouteRequest, signal?: AbortSignal): Promise<Route[]> {
+  const vehicle = req.vehicle ?? DEFAULT_VEHICLE;
   const body = {
     locations: [
-      { lat: req.from.lat, lon: req.from.lng },
+      {
+        lat: req.from.lat,
+        lon: req.from.lng,
+        ...(req.heading !== undefined && Number.isFinite(req.heading) ? { heading: Math.round(((req.heading % 360) + 360) % 360), heading_tolerance: 60 } : {}),
+      },
       { lat: req.to.lat, lon: req.to.lng },
     ],
-    costing: "auto",
-    // use_tolls: 0 = avoid tolls as much as possible, 0.5 = neutral (the default).
-    costing_options: { auto: { use_tolls: req.avoidTolls ? 0 : 0.5, ...(req.options ?? {}) } },
+    ...costingRequest(vehicle, req.avoidTolls, req.options),
     alternates: req.alternates ?? 2,
     directions_options: { units: "kilometers", language: "en-US" },
     // Valhalla: "exclude_polygons" is a list of rings of [lon, lat] points.
@@ -52,6 +74,8 @@ export async function fetchRoutes(req: RouteRequest, signal?: AbortSignal): Prom
     /* handled below */
   }
   if (!res.ok || !data?.trip) {
+    // The public server may not offer every vehicle type: say so instead of "no route".
+    if (vehicle.type !== "car" && res.status === 400 && /costing/i.test(data?.error ?? "")) throw new Error(t("route.err.vehicle"));
     throw new Error(data?.error ? t("route.err.noRoute", { e: data.error }) : t("route.err.server", { s: res.status }));
   }
 
@@ -76,16 +100,17 @@ function sameRoad(a: Route, b: Route): boolean {
  * Returns fewer than three only when the map really has no more different roads.
  */
 export async function fetchRouteChoices(
-  req: { from: LatLng; to: LatLng; avoidTolls: boolean },
+  req: { from: LatLng; to: LatLng; avoidTolls: boolean; vehicle?: Vehicle },
   signal?: AbortSignal,
 ): Promise<Route[]> {
+  const vehicle = req.vehicle ?? DEFAULT_VEHICLE;
   const have: Route[] = [];
   const add = (rs: Route[]) => {
     for (const r of rs) if (have.length < ROUTE_CHOICES && !have.some((h) => sameRoad(r, h))) have.push(r);
   };
   const ask = async (extra: Partial<RouteRequest>): Promise<Route[]> => {
     try {
-      return await fetchRoutes({ from: req.from, to: req.to, avoidTolls: req.avoidTolls, alternates: 0, ...extra }, signal);
+      return await fetchRoutes({ from: req.from, to: req.to, avoidTolls: req.avoidTolls, vehicle, alternates: 0, ...extra }, signal);
     } catch (e) {
       if ((e as Error).name === "AbortError") throw e;
       return [];
@@ -93,15 +118,19 @@ export async function fetchRouteChoices(
   };
 
   // The first ask decides success or failure, with its own error message.
-  add(await fetchRoutes({ from: req.from, to: req.to, avoidTolls: req.avoidTolls, alternates: 2 }, signal));
+  add(await fetchRoutes({ from: req.from, to: req.to, avoidTolls: req.avoidTolls, vehicle, alternates: 2 }, signal));
 
   if (have.length < ROUTE_CHOICES) {
-    const styles: Record<string, number | boolean>[] = [
-      ...(req.avoidTolls ? [] : [{ use_tolls: 0 }]),
-      { shortest: true },
-      { use_highways: 0 },
-      ...(req.avoidTolls ? [] : [{ use_tolls: 1 }]),
-    ];
+    // A motorcycle pays no toll, so its styles are about expressways: off them, or on the ones with a lane.
+    const styles: Record<string, number | boolean>[] =
+      vehicle.type === "motorcycle"
+        ? [{ shortest: true }, ...(req.avoidTolls ? [] : [{ use_highways: 0 }, { use_highways: 1 }])]
+        : [
+            ...(req.avoidTolls ? [] : [{ use_tolls: 0 }]),
+            { shortest: true },
+            { use_highways: 0 },
+            ...(req.avoidTolls ? [] : [{ use_tolls: 1 }]),
+          ];
     const results = await Promise.all(styles.map((options) => ask({ options })));
     for (const rs of results) add(rs);
   }
@@ -113,7 +142,35 @@ export async function fetchRouteChoices(
       add(await ask({ avoid: avoidAheadPolygon(main, main.lengthM * frac - 500, 0, 1000, 60) }));
     }
   }
-  return have.sort((a, b) => a.durationS - b.durationS);
+  const byTime = have.sort((a, b) => a.durationS - b.durationS);
+  // Motorcycle: a route along an expressway with no known lane goes last, so the first one is the likeliest to be allowed.
+  return vehicle.type === "motorcycle" ? motorcycleOrder(byTime) : byTime;
+}
+
+/**
+ * A new route after a wrong turn. First asks for a route that carries on in the direction
+ * you are driving (so the first instruction is not "make a U-turn" when you can simply
+ * continue); if the server finds nothing that way, asks again without the direction.
+ */
+export async function fetchReroute(
+  req: { from: LatLng; to: LatLng; avoidTolls: boolean; vehicle?: Vehicle; heading?: number | null; speedMps?: number | null },
+  signal?: AbortSignal,
+): Promise<Route> {
+  const base = { from: req.from, to: req.to, avoidTolls: req.avoidTolls, vehicle: req.vehicle, alternates: 0 };
+  // The phone's heading means little when almost stopped.
+  const heading = req.heading != null && Number.isFinite(req.heading) && (req.speedMps ?? 0) >= 2.5 ? req.heading : undefined;
+  if (heading !== undefined) {
+    try {
+      const rs = await fetchRoutes({ ...base, heading }, signal);
+      if (rs[0]) return rs[0];
+    } catch (e) {
+      if ((e as Error).name === "AbortError") throw e;
+      // fall through: ask again without a direction
+    }
+  }
+  const rs = await fetchRoutes(base, signal);
+  if (!rs[0]) throw new Error(t("route.err.reach"));
+  return rs[0];
 }
 
 export type RerouteKind = "avoid" | "alt";
@@ -128,13 +185,13 @@ export interface RerouteOption {
  * simply left out; we only fail if nothing at all came back.
  */
 export async function fetchRerouteOptions(
-  req: { from: LatLng; to: LatLng; avoidTolls: boolean; avoidArea: LatLng[]; current: Route },
+  req: { from: LatLng; to: LatLng; avoidTolls: boolean; vehicle?: Vehicle; avoidArea: LatLng[]; current: Route },
   signal?: AbortSignal,
 ): Promise<RerouteOption[]> {
   const [plain, avoided] = await Promise.allSettled([
-    fetchRoutes({ from: req.from, to: req.to, avoidTolls: req.avoidTolls, alternates: 2 }, signal),
+    fetchRoutes({ from: req.from, to: req.to, avoidTolls: req.avoidTolls, vehicle: req.vehicle, alternates: 2 }, signal),
     req.avoidArea.length > 3
-      ? fetchRoutes({ from: req.from, to: req.to, avoidTolls: req.avoidTolls, alternates: 0, avoid: req.avoidArea }, signal)
+      ? fetchRoutes({ from: req.from, to: req.to, avoidTolls: req.avoidTolls, vehicle: req.vehicle, alternates: 0, avoid: req.avoidArea }, signal)
       : Promise.reject(new Error("no area")),
   ]);
   if (signal?.aborted) throw new DOMException("Aborted", "AbortError");
@@ -164,13 +221,13 @@ export async function fetchTripTotals(
   from: LatLng,
   stops: LatLng[],
   avoidTolls: boolean,
+  vehicle: Vehicle,
   signal?: AbortSignal,
 ): Promise<{ lengthM: number; durationS: number } | null> {
   if (stops.length < 2) return null;
   const body = {
     locations: [from, ...stops].map((p) => ({ lat: p.lat, lon: p.lng, type: "break" })),
-    costing: "auto",
-    costing_options: { auto: { use_tolls: avoidTolls ? 0 : 0.5 } },
+    ...costingRequest(vehicle, avoidTolls),
     directions_options: { units: "kilometers", language: "en-US" },
   };
   try {

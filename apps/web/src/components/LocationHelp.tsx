@@ -1,5 +1,6 @@
 import { detectEnv } from "../lib/permission";
 import { boldParts, t, useT, type Key } from "../lib/i18n";
+import { CloseIcon } from "./icons";
 
 // Turns **bold** markers into <b> without using innerHTML.
 function rich(text: string) {
@@ -53,7 +54,7 @@ export function LocationHelp({ onRetry, onClose }: { onRetry: () => void; onClos
       <div className="modal-card" style={{ paddingBottom: "max(20px, env(safe-area-inset-bottom))" }}>
         <div className="sheet-head">
           <div className="sheet-title">{t("loc.helpTitle")}</div>
-          <button className="icon-btn" aria-label={t("common.close")} onClick={onClose}>✕</button>
+          <button className="icon-btn" aria-label={t("common.close")} onClick={onClose}><CloseIcon size={20} /></button>
         </div>
         <p>{t("loc.helpBody")}</p>
         <h3>{s.title}</h3>
