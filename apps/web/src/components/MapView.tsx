@@ -4,7 +4,7 @@ import "maplibre-gl/dist/maplibre-gl.css";
 // MapLibre 6 runs map parsing in a separate worker file. Bundlers do not copy it
 // next to the app code on their own, so we give MapLibre its address explicitly.
 import workerUrl from "maplibre-gl/dist/maplibre-gl-worker.mjs?url";
-import { haversine, type LatLng, type Poi, type Route } from "@arah/core";
+import { haversine, pointAtDistance, type LatLng, type Poi, type Route } from "@arah/core";
 import { config } from "../lib/config";
 import { CATEGORY_UI, iconSvg } from "../lib/categories";
 import type { RouteMarks } from "../lib/routeMarks";
@@ -39,11 +39,25 @@ interface Props {
   onMoveEnd: (center: LatLng) => void;
   /** Traffic lights, cameras and toll plazas on the chosen route (route preview only). */
   marks: RouteMarks | null;
+  /** While driving: how far along the chosen route you are (m). The part behind you is drawn grey. Null when not driving. */
+  progressM: number | null;
   /** Numbered pins for the stops of a multi-stop trip. */
   stops: { lat: number; lng: number; n: number; done: boolean }[];
 }
 
 maplibregl.setWorkerUrl(workerUrl);
+
+/** A phone held sideways: panels sit in a column on the left instead of a sheet along the bottom. */
+const LANDSCAPE_Q = "(orientation: landscape) and (max-height: 560px)";
+const isLandscape = () => typeof window !== "undefined" && window.matchMedia(LANDSCAPE_Q).matches;
+/** Width of that left column (matches the CSS: min(400px, 46vw) plus its margin). */
+const sidePanelPx = () => Math.round(Math.min(400, window.innerWidth * 0.46)) + 20;
+/** Map padding that keeps the route clear of the panel: below it on a portrait phone, beside it in landscape. */
+function framePadding(bottom: number, top: number) {
+  return isLandscape()
+    ? { top: 56, bottom: 28, left: sidePanelPx() + 24, right: 70 }
+    : { top, bottom, left: 36, right: 36 };
+}
 
 /** Lights are small dots; draw at most this many so a very long route stays smooth. */
 const MAX_LIGHT_MARKERS = 400;
@@ -73,7 +87,7 @@ const angleDiff = (from: number, to: number) => ((((to - from) % 360) + 540) % 3
 const toLine = (r: Route) => r.points.map((p) => [p.lng, p.lat] as [number, number]);
 
 export const MapView = forwardRef<MapHandle, Props>(function MapView(
-  { routes, selected, dest, user, navigating, follow, onUserMove, pois, selectedPoiId, onPoiClick, onLongPress, onMoveEnd, marks, stops },
+  { routes, selected, dest, user, navigating, follow, onUserMove, pois, selectedPoiId, onPoiClick, onLongPress, onMoveEnd, marks, stops, progressM },
   ref,
 ) {
   const el = useRef<HTMLDivElement>(null);
@@ -82,8 +96,8 @@ export const MapView = forwardRef<MapHandle, Props>(function MapView(
   const userMarker = useRef<maplibregl.Marker | null>(null);
   const destMarker = useRef<maplibregl.Marker | null>(null);
   const centered = useRef(false);
-  const latest = useRef({ routes, selected, user, navigating, follow });
-  latest.current = { routes, selected, user, navigating, follow };
+  const latest = useRef({ routes, selected, user, navigating, follow, progressM });
+  latest.current = { routes, selected, user, navigating, follow, progressM };
   const onMove = useRef(onUserMove);
   onMove.current = onUserMove;
   const motion = useRef({
@@ -118,7 +132,7 @@ export const MapView = forwardRef<MapHandle, Props>(function MapView(
       const b = new maplibregl.LngLatBounds();
       for (const p of points) b.extend([p.lng, p.lat]);
       clearCameraPadding(m);
-      m.fitBounds(b, { padding: { top: 190, bottom: bottom + 30, left: 40, right: 40 }, maxZoom: 16, duration: 700 });
+      m.fitBounds(b, { padding: framePadding(bottom + 30, 190), maxZoom: 16, duration: 700 });
     },
     focus(point, bottom) {
       const m = map.current;
@@ -126,7 +140,7 @@ export const MapView = forwardRef<MapHandle, Props>(function MapView(
       m.easeTo({
         center: [point.lng, point.lat],
         zoom: Math.max(m.getZoom(), 15),
-        padding: { top: 120, bottom, left: 0, right: 0 },
+        padding: isLandscape() ? { top: 0, bottom: 0, left: sidePanelPx(), right: 0 } : { top: 120, bottom, left: 0, right: 0 },
         duration: 600,
       });
     },
@@ -183,8 +197,25 @@ export const MapView = forwardRef<MapHandle, Props>(function MapView(
         layout: { "line-cap": "round", "line-join": "round" },
         paint: { "line-color": "#2f7bff", "line-width": 7 },
       });
+      // The stretch already driven is greyed out, so it is never mistaken for the road still ahead.
+      m.addSource("routes-done", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
+      m.addLayer({
+        id: "routes-done-casing",
+        type: "line",
+        source: "routes-done",
+        layout: { "line-cap": "round", "line-join": "round" },
+        paint: { "line-color": "#6b7280", "line-width": 11 },
+      });
+      m.addLayer({
+        id: "routes-done",
+        type: "line",
+        source: "routes-done",
+        layout: { "line-cap": "round", "line-join": "round" },
+        paint: { "line-color": "#c3c9d4", "line-width": 7 },
+      });
       ready.current = true;
       pushRoutes();
+      pushDone();
     });
 
     m.on("dragstart", (e) => {
@@ -261,6 +292,38 @@ export const MapView = forwardRef<MapHandle, Props>(function MapView(
     });
   }
 
+  function pushDone() {
+    const m = map.current;
+    if (!m || !ready.current) return;
+    const { routes: rs, selected: sel, navigating: nav } = latest.current;
+    const r = rs[sel];
+    const d = latest.current.progressM;
+    const src = m.getSource("routes-done") as maplibregl.GeoJSONSource | undefined;
+    let coords: [number, number][] = [];
+    if (nav && r && d != null && d > 5) {
+      // Points up to where you are, then the exact spot you are at (binary search keeps this cheap every second).
+      let lo = 0;
+      let hi = r.points.length - 1;
+      while (hi - lo > 1) {
+        const mid = (lo + hi) >> 1;
+        if ((r.cumDist[mid] ?? 0) <= d) lo = mid;
+        else hi = mid;
+      }
+      coords = r.points.slice(0, lo + 1).map((p) => [p.lng, p.lat] as [number, number]);
+      const here = pointAtDistance(r, d).point;
+      coords.push([here.lng, here.lat]);
+    }
+    src?.setData({
+      type: "FeatureCollection",
+      features: coords.length > 1 ? [{ type: "Feature" as const, properties: {}, geometry: { type: "LineString" as const, coordinates: coords } }] : [],
+    });
+  }
+
+  useEffect(() => {
+    pushDone();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [progressM, navigating, routes, selected]);
+
   // ---- routes: draw them. New routes: frame all of them. Picking one: zoom to it ----
   useEffect(() => {
     pushRoutes();
@@ -275,7 +338,7 @@ export const MapView = forwardRef<MapHandle, Props>(function MapView(
     clearCameraPadding(m);
     // The route sheet is at most 52% of the screen tall; keep the route above it.
     const bottom = Math.round(window.innerHeight * 0.52) + 24;
-    m.fitBounds(b, { padding: { top: 90, bottom, left: 36, right: 36 }, maxZoom: 17, duration: 700 });
+    m.fitBounds(b, { padding: framePadding(bottom, 90), maxZoom: 17, duration: 700 });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [routes, selected]);
 
@@ -534,9 +597,10 @@ export const MapView = forwardRef<MapHandle, Props>(function MapView(
       const pad = m.getPadding().top ?? 0;
       const nz = z + (17 - z) * k;
       const np = pt + (55 - pt) * k;
-      const npad = pad + (240 - pad) * k;
+      const padTarget = Math.round(Math.min(240, window.innerHeight * (isLandscape() ? 0.22 : 0.3)));
+      const npad = pad + (padTarget - pad) * k;
       m.jumpTo({ center: [mo.shown.lng, mo.shown.lat], bearing: mo.camBearing, zoom: nz, pitch: np, padding: { top: npad, bottom: 0, left: 0, right: 0 } });
-      if (Math.abs(17 - nz) > 0.01 || Math.abs(55 - np) > 0.2 || Math.abs(240 - npad) > 0.5 || Math.abs(angleDiff(mo.camBearing, mo.shown.heading)) > 0.2) busy = true;
+      if (Math.abs(17 - nz) > 0.01 || Math.abs(55 - np) > 0.2 || Math.abs(padTarget - npad) > 0.5 || Math.abs(angleDiff(mo.camBearing, mo.shown.heading)) > 0.2) busy = true;
     }
     if (busy) mo.raf = requestAnimationFrame(frame);
   }

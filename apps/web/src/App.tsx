@@ -919,6 +919,7 @@ export default function App() {
         onPoiClick={(p) => showPlace(poiToPlace(p))}
         onLongPress={dropPin}
         marks={routeMarks}
+        progressM={phase === "navigating" && nav && nav.status !== "arrived" ? nav.distanceAlongM : null}
         stops={mapStops}
         onMoveEnd={(c) => {
           if (phaseRef.current === "browse") setViewCenter(c);
