@@ -19,10 +19,15 @@ export function Splash({ onDone }: { onDone: () => void }) {
 
   return (
     <div className={`splash${leaving ? " leaving" : ""}`} aria-hidden={leaving}>
-      <div className="splash-road" aria-hidden />
+      <svg className="splash-route" viewBox="0 0 400 800" preserveAspectRatio="xMidYMid slice" aria-hidden>
+        <path d="M-20 700 C 120 640, 80 520, 220 470 S 330 330, 260 220 S 420 120, 440 40" />
+        <circle cx="440" cy="40" r="7" />
+      </svg>
       <div className="splash-center">
         <div className="splash-logo">
-          <Logo size={96} />
+          <span className="ring r1" />
+          <span className="ring r2" />
+          <Logo size={104} />
         </div>
         <div className="splash-word">Arah</div>
         <div className="splash-tag">{t("splash.tag")}</div>
