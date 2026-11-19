@@ -11,6 +11,8 @@ import {
   laneStatus,
   matchCamerasToRoute,
   motorcycleNotes,
+  extraKindsFor,
+  type RouteExtra,
   moveStop,
   movePoint,
   nearestFirst,
@@ -38,6 +40,7 @@ import {
 } from "@arah/core";
 import { MapView, type MapHandle } from "./components/MapView";
 import { buildMarks } from "./lib/routeMarks";
+import { fetchRouteExtras } from "./lib/routeExtras";
 import { SearchPanel } from "./components/SearchPanel";
 import { RoutePreview } from "./components/RoutePreview";
 import { NavHud } from "./components/NavHud";
@@ -823,14 +826,28 @@ export default function App() {
     browse && !selPlace && nearby.active.length > 0 && nearby.status !== "loading" && !!viewCenter && !!nearby.center && haversine(viewCenter, nearby.center) > DEFAULT_RADIUS_M / 2;
   // While driving, only the next stretch is drawn (and redrawn every ~150 m) so the map stays smooth.
   const alongBucket = nav ? Math.floor(nav.distanceAlongM / MARK_STEP_M) * MARK_STEP_M : 0;
+  // Rain shelters (motorcycle) and footbridges / height limits (truck) along the chosen route, from OpenStreetMap.
+  const [extras, setExtras] = useState<{ route: Route; items: RouteExtra[] } | null>(null);
+  useEffect(() => {
+    const kinds = extraKindsFor(routeVehicle.type);
+    if (!route || kinds.length === 0 || phase === "browse") return;
+    const ac = new AbortController();
+    void fetchRouteExtras(route, kinds, ac.signal).then((items) => {
+      if (!ac.signal.aborted && items) setExtras({ route, items });
+    });
+    return () => ac.abort();
+  }, [route, routeVehicle.type, phase]);
+  const extraItems = extras && extras.route === route ? extras.items : [];
+  const truckHeightM = routeVehicle.type === "truck" ? routeVehicle.truck.heightM : undefined;
   const routeMarks = useMemo(() => {
+    const more = { route, lanes: laneStretches, extras: extraItems, truckHeightM };
     if (phase === "navigating") {
-      return navFeatures ? buildMarks(navFeatures, { fromM: alongBucket - 100, toM: alongBucket + MARK_AHEAD_M }, cameraMatches) : null;
+      return navFeatures ? buildMarks(navFeatures, { fromM: alongBucket - 100, toM: alongBucket + MARK_AHEAD_M }, cameraMatches, more) : null;
     }
     if (phase !== "preview" || stats.status !== "loaded") return null;
     const f = stats.list[sel];
-    return f ? buildMarks(f, undefined, cameraMatches) : null;
-  }, [phase, stats, sel, navFeatures, alongBucket, cameraMatches]);
+    return f ? buildMarks(f, undefined, cameraMatches, more) : null;
+  }, [phase, stats, sel, navFeatures, alongBucket, cameraMatches, route, laneStretches, extraItems, truckHeightM]);
   const lightsInfo = useMemo(
     () => (phase === "navigating" && navFeatures && nav && nav.status !== "arrived" ? signalsAhead(navFeatures.signals, nav.distanceAlongM) : null),
     [phase, navFeatures, nav],
@@ -855,6 +872,23 @@ export default function App() {
   const tollInfo = nextToll
     ? { name: nextToll.name, distM: nextToll.distM, pay: tollPay && tollPay.key === tollKey && tollPay.pay && hasPaymentInfo(tollPay.pay) ? tollPay.pay : null }
     : null;
+  // Spoken: which lane types the plaza ahead is tagged for on OpenStreetMap (or that they are not mapped).
+  const tollSaid = useRef(new Set<string>());
+  useEffect(() => {
+    if (phase !== "navigating") {
+      tollSaid.current.clear();
+      return;
+    }
+    if (!nextToll || !tollKey || tollSaid.current.has(tollKey)) return;
+    const loaded = !!tollPay && tollPay.key === tollKey;
+    if (nextToll.distM > 1000 || (!loaded && nextToll.distM > 450)) return;
+    tollSaid.current.add(tollKey);
+    const pay = loaded && tollPay.pay && hasPaymentInfo(tollPay.pay) ? tollPay.pay : null;
+    const names = pay
+      ? ([pay.tng > 0 && t("voice.toll.tng"), pay.smarttag > 0 && t("voice.toll.smarttag"), pay.rfid > 0 && t("voice.toll.rfid")] as (string | false)[]).filter((x): x is string => !!x)
+      : [];
+    voice.speak(names.length ? t("voice.toll.tagged", { methods: names.join(t("voice.toll.and")) }) : t("voice.toll.none"));
+  }, [phase, nextToll, tollKey, tollPay, t]);
   const placeDistance = selPlace && nearbyFrom !== null && geo.fix ? haversine(geo.fix, selPlace) : null;
 
   const mapStops = useMemo(

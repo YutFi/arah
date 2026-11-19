@@ -228,7 +228,12 @@ function RouteDetails({ route, stats, index, awas, vehicle }: { route: Route; st
         <span><i className="l-camera" />{t("route.legend.cam")}</span>
         {awas > 0 && <span><i className="l-awas" />{t("route.legend.awas")}</span>}
         {cls !== "free" && <span><i className="l-toll" />{t("route.legend.toll")}</span>}
+        {vehicle.type === "motorcycle" && <span><i className="l-lane" />{t("route.legend.lane")}</span>}
+        {vehicle.type === "motorcycle" && <span><i className="l-shelter" />{t("route.legend.shelter")}</span>}
+        {vehicle.type === "truck" && <span><i className="l-bridge" />{t("route.legend.bridge")}</span>}
       </div>
+      {vehicle.type === "truck" && <div className="foot-note">{t("route.legend.truckNote")}</div>}
+      {vehicle.type === "motorcycle" && <div className="foot-note">{t("route.legend.shelterNote")}</div>}
       {vehicle.type === "motorcycle" && <div className="foot-note">{t("route.moto.why", { d: LANE_DATA_CHECKED_ON })}</div>}
       {cls !== "free" && (f.tolls.length > 0 || est.nseKm > 0) && (
         <details className="toll-box">
